@@ -1,0 +1,30 @@
+excluded:
+  - .build
+
+opt_in_rules:
+  - explicit_self
+  - implicit_return
+  - prohibited_super_call
+  - first_where
+  - last_where
+  - closure_spacing
+  - unneeded_parentheses_in_closure_argument
+  - redundant_nil_coalescing
+  - explicit_init
+  - contains_over_first_not_nil
+  - legacy_random
+
+disabled_rules:
+  - function_body_length
+  - type_body_length
+  - identifier_name
+  - todo
+  - file_length
+  - cyclomatic_complexity
+  - large_tuple
+  - type_name
+  - nesting
+  - opening_brace
+
+line_length: 200
+function_parameter_count: 10
