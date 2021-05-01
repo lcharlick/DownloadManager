@@ -161,9 +161,9 @@ public class DownloadManager: NSObject {
         for download in downloads {
             let task = tasks[download.id] ?? createTask(for: download)
             tasks[download.id] = task
-            state.progress.addChild(download.progress)
             delegate?.download(download, didCreateTask: task)
         }
+        state.progress.addChildren(downloads.map { $0.progress })
         queue.append(downloads)
     }
 
@@ -183,8 +183,8 @@ public class DownloadManager: NSObject {
     public func remove(_ downloads: Set<Download>) {
         for download in downloads {
             cancelTask(for: download)
-            state.progress.removeChild(download.progress)
         }
+        state.progress.removeChildren(downloads.map { $0.progress })
         queue.remove(downloads)
     }
 

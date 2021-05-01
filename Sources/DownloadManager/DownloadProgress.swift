@@ -127,8 +127,16 @@ public class DownloadProgress: Identifiable, ObservableObject {
         children.insert(child)
     }
 
+    func addChildren(_ children: [DownloadProgress]) {
+        self.children.formUnion(Set(children))
+    }
+
     func removeChild(_ child: DownloadProgress) {
         children.remove(child)
+    }
+
+    func removeChildren(_ children: [DownloadProgress]) {
+        self.children.subtract(children)
     }
 }
 
