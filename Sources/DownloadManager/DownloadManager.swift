@@ -70,13 +70,20 @@ public class DownloadManager: NSObject {
             }
             self?.handleDownloadStatusChanged(download)
         }
+    }
 
-        // Reattach any outstanding tasks from a previous launch.
+    /// Reattach any outstanding tasks from a previous launch.
+    public func attachOutstandingDownloadTasks(
+        queue: DispatchQueue = .main,
+        completionHandler: @escaping (Int) -> Void
+    ) {
         session.getAllTasks { [weak self] tasks in
-            DispatchQueue.main.async {
-                self?.registerTasks(tasks.compactMap {
+            queue.async {
+                let downloadTasks = tasks.compactMap {
                     $0 as? URLSessionDownloadTask
-                })
+                }
+                self?.registerTasks(downloadTasks)
+                completionHandler(downloadTasks.count)
             }
         }
     }
