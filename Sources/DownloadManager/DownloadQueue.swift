@@ -13,9 +13,10 @@ protocol DownloadQueueDelegate: AnyObject {
 }
 
 class DownloadQueue {
-    @Atomic
+    @MainThreadProtected
     var cache = [Download.ID: Download]()
 
+    @MainThreadProtected
     private(set) var downloads = [Download]()
 
     private weak var delegate: DownloadQueueDelegate?

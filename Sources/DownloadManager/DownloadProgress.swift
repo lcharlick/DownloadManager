@@ -51,7 +51,8 @@ public class DownloadProgress: Identifiable, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var updateFractionCancellable: AnyCancellable?
 
-    @Atomic
+    private let lock = NSLock()
+
     private var children: Set<DownloadProgress> = [] {
         didSet {
             updateBindings()
@@ -124,19 +125,27 @@ public class DownloadProgress: Identifiable, ObservableObject {
     }
 
     func addChild(_ child: DownloadProgress) {
+        lock.lock()
         children.insert(child)
+        lock.unlock()
     }
 
     func addChildren(_ children: [DownloadProgress]) {
+        lock.lock()
         self.children.formUnion(Set(children))
+        lock.unlock()
     }
 
     func removeChild(_ child: DownloadProgress) {
+        lock.lock()
         children.remove(child)
+        lock.unlock()
     }
 
     func removeChildren(_ children: [DownloadProgress]) {
+        lock.lock()
         self.children.subtract(children)
+        lock.unlock()
     }
 }
 

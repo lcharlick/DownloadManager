@@ -38,10 +38,10 @@ public class DownloadManager: NSObject {
     /// Used to calculate a rolling average.
     private var lastThroughputUnitCount: Double = 0
 
-    @Atomic
+    @MainThreadProtected
     private var tasks = [Download.ID: URLSessionDownloadTask]()
 
-    @Atomic
+    @MainThreadProtected
     private var taskIdentifiers = [Int: Download]()
 
     private var downloadStatusChangedObservation: NSObjectProtocol?
@@ -257,7 +257,9 @@ private extension DownloadManager {
         }
 
         if !downloads.isEmpty {
-            append(downloads)
+            DispatchQueue.main.async {
+                self.append(downloads)
+            }
         }
     }
 
@@ -279,9 +281,11 @@ private extension DownloadManager {
             return
         }
         task.cancel { [weak self] data in
-            self?.delegate?.download(download, didCancelWithResumeData: data)
-            self?.tasks[download.id] = nil
-            self?.taskIdentifiers[task.taskIdentifier] = nil
+            DispatchQueue.main.async {
+                self?.delegate?.download(download, didCancelWithResumeData: data)
+                self?.tasks[download.id] = nil
+                self?.taskIdentifiers[task.taskIdentifier] = nil
+            }
         }
     }
 }
@@ -339,34 +343,30 @@ extension DownloadManager: URLSessionDownloadDelegate {
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
-        guard let download = taskIdentifiers[task.taskIdentifier] else {
-            return
-        }
+        DispatchQueue.main.async {
+            guard let download = self.taskIdentifiers[task.taskIdentifier] else {
+                return
+            }
 
-        if let error = error as NSError? {
-            // Client error.
-            if error.domain == NSURLErrorDomain {
-                let urlError = URLError(URLError.Code(rawValue: error.code))
-                // Don't consider cancellation a failure.
-                if urlError.code != .cancelled {
-                    DispatchQueue.main.async {
+            if let error = error as NSError? {
+                // Client error.
+                if error.domain == NSURLErrorDomain {
+                    let urlError = URLError(URLError.Code(rawValue: error.code))
+                    // Don't consider cancellation a failure.
+                    if urlError.code != .cancelled {
                         download.status = .failed(.transportError(urlError, localizedDescription: error.localizedDescription))
                     }
-                }
-            } else {
-                DispatchQueue.main.async {
+                } else {
                     download.status = .failed(.unknown(code: error.code, localizedDescription: error.localizedDescription))
                 }
+                return
             }
-            return
-        }
 
-        guard let response = task.response as? HTTPURLResponse else {
-            return
-        }
+            guard let response = task.response as? HTTPURLResponse else {
+                return
+            }
 
-        if !Constants.acceptableStatusCodes.contains(response.statusCode) {
-            DispatchQueue.main.async {
+            if !Constants.acceptableStatusCodes.contains(response.statusCode) {
                 download.status = .failed(.serverError(statusCode: response.statusCode))
             }
         }
@@ -379,12 +379,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
-        guard let download = taskIdentifiers[downloadTask.taskIdentifier] else {
-            downloadTask.cancel()
-            return
-        }
-
         DispatchQueue.main.async {
+            guard let download = self.taskIdentifiers[downloadTask.taskIdentifier] else {
+                downloadTask.cancel()
+                return
+            }
+
             download.progress.received = Int(totalBytesWritten)
             download.progress.expected = Int(totalBytesExpectedToWrite)
             self.delegate?.downloadDidUpdateProgress(download)
@@ -396,14 +396,13 @@ extension DownloadManager: URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        guard let download = taskIdentifiers[downloadTask.taskIdentifier] else {
-//            assertionFailure("Download not found for url: \(url)")
-            return
-        }
-
-        delegate?.download(download, didFinishDownloadingTo: location)
-
         DispatchQueue.main.async {
+            guard let download = self.taskIdentifiers[downloadTask.taskIdentifier] else {
+                return
+            }
+
+            self.delegate?.download(download, didFinishDownloadingTo: location)
+
             download.status = .finished
         }
     }
