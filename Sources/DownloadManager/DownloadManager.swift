@@ -396,7 +396,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.sync {
             guard let download = self.taskIdentifiers[downloadTask.taskIdentifier] else {
                 return
             }
