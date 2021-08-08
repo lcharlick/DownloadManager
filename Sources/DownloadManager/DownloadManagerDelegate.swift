@@ -29,7 +29,7 @@ public protocol DownloadManagerDelegate: AnyObject {
     /// Tells the delegate when a background download task reconnects.
     func download(_ download: Download, didReconnectTask: URLSessionDownloadTask)
 
-    /// Tells the delegate that a download task has been finished downloading.
+    /// Tells the delegate that a download task has finished downloading.
     /// The file at `location` must be opened or moved before this method returns.
     func download(_ download: Download, didFinishDownloadingTo location: URL)
 
