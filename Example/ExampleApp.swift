@@ -9,7 +9,7 @@ import SwiftUI
 import DownloadManager
 
 private enum Constants {
-    static let httpbin = URL(string: "http://httpbin.org")!
+    static let httpbin = URL(string: "https://httpbin.org")!
     static let downloadCount = 3
     /// Max httpbin file size (~100kb).
     static let maxFileSize = 102_400

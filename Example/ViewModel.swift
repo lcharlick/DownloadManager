@@ -81,7 +81,6 @@ class ViewModel: ViewModelType, ObservableObject {
         manager.remove(Set(downloads))
     }
 
-    /// Placeholder for Prism `Item`.
     struct Item {
         let id: Int
         let url: URL
@@ -101,7 +100,7 @@ extension ViewModel: DownloadManagerDelegate {
     }
 
     func downloadDidUpdateProgress(_ download: Download) {
-//        print("progress updated: \(download.progress.fractionCompleted)")
+        // print("progress updated: \(download.progress.fractionCompleted)")
     }
 
     func downloadThroughputDidChange(_ throughput: Int) {
