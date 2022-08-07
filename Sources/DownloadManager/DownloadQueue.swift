@@ -7,33 +7,28 @@
 
 import Foundation
 
-protocol DownloadQueueDelegate: AnyObject {
-    func queueDidChange()
-    func downloadShouldBeginDownloading(_ download: Download)
+protocol DownloadQueueDelegate: Actor {
+    var maxConcurrentDownloads: Int { get }
+    func queueDidChange() async
+    func downloadShouldBeginDownloading(_ download: Download) async
 }
 
-class DownloadQueue {
-    @MainThreadProtected
+actor DownloadQueue {
     var cache = [Download.ID: Download]()
 
-    @MainThreadProtected
     private(set) var downloads = [Download]()
 
     private weak var delegate: DownloadQueueDelegate?
-
-    var maxConcurrentDownloads: Int = 1 {
-        didSet {
-            update()
-        }
-    }
 
     init(delegate: DownloadQueueDelegate) {
         self.delegate = delegate
     }
 
-    func update() {
+    func update() async {
         let downloadsByStatus = Dictionary(grouping: downloads) { $0.status }
         let numberDownloading = downloadsByStatus[.downloading]?.count ?? 0
+        let maxConcurrentDownloads = await delegate?.maxConcurrentDownloads ?? 1
+
         let slotsAvailable = maxConcurrentDownloads - numberDownloading
 
         guard numberDownloading <= maxConcurrentDownloads else {
@@ -41,7 +36,7 @@ class DownloadQueue {
         }
 
         for download in downloadsByStatus[.idle]?.prefix(slotsAvailable) ?? [] {
-            delegate?.downloadShouldBeginDownloading(download)
+            await delegate?.downloadShouldBeginDownloading(download)
         }
     }
 
@@ -54,37 +49,37 @@ class DownloadQueue {
         cache[download.id] = download
     }
 
-    func append(_ download: Download) {
+    func append(_ download: Download) async {
         add(download)
-        update()
-        delegate?.queueDidChange()
+        await update()
+        await delegate?.queueDidChange()
     }
 
-    func append(_ downloads: [Download]) {
+    func append(_ downloads: [Download]) async {
         for download in downloads {
             add(download)
         }
-        update()
-        delegate?.queueDidChange()
+        await update()
+        await delegate?.queueDidChange()
     }
 
-    func remove(_ download: Download) {
+    func remove(_ download: Download) async {
         cache[download.id] = nil
         if let index = downloads.firstIndex(where: { $0.id == download.id }) {
             downloads.remove(at: index)
-            delegate?.queueDidChange()
+            await delegate?.queueDidChange()
         }
-        update()
+        await update()
     }
 
-    func remove(_ downloadsToRemove: Set<Download>) {
+    func remove(_ downloadsToRemove: Set<Download>) async {
         for download in downloadsToRemove {
             cache[download.id] = nil
         }
 
         downloads = downloads.filter { !downloadsToRemove.contains($0) }
 
-        delegate?.queueDidChange()
-        update()
+        await delegate?.queueDidChange()
+        await update()
     }
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Manages a queue of http download tasks.
-public class DownloadManager: NSObject {
+public actor DownloadManager: NSObject {
     lazy var queue = DownloadQueue(
         delegate: self
     )
@@ -25,10 +25,10 @@ public class DownloadManager: NSObject {
     public weak var delegate: DownloadManagerDelegate?
 
     /// The maximum number of downloads that can simultaneously have the `downloading` status.
-    public var maxConcurrentDownloads: Int = 1 {
-        didSet {
-            queue.maxConcurrentDownloads = maxConcurrentDownloads
-        }
+    private(set) public var maxConcurrentDownloads: Int = 1
+
+    public func setMaxConcurrentDownloads(_ value: Int) {
+        maxConcurrentDownloads = value
     }
 
     /// The time the last throughput value was calculated.
@@ -38,10 +38,8 @@ public class DownloadManager: NSObject {
     /// Used to calculate a rolling average.
     private var lastThroughputUnitCount: Double = 0
 
-    @MainThreadProtected
     private var tasks = [Download.ID: URLSessionDownloadTask]()
 
-    @MainThreadProtected
     private var taskIdentifiers = [Int: Download]()
 
     private var downloadStatusChangedObservation: NSObjectProtocol?
@@ -68,35 +66,34 @@ public class DownloadManager: NSObject {
             guard let download = notification.object as? Download else {
                 return
             }
-            self?.handleDownloadStatusChanged(download)
+            Task {
+                await self?.handleDownloadStatusChanged(download)
+            }
         }
     }
 
     /// Reattach any outstanding tasks from a previous launch.
-    public func attachOutstandingDownloadTasks(
-        queue: DispatchQueue = .main,
-        completionHandler: @escaping (Int) -> Void
-    ) {
-        session.getAllTasks { [weak self] tasks in
-            queue.async {
+    public func attachOutstandingDownloadTasks(completionHandler: @escaping (Int) -> Void) {
+        session.getAllTasks { tasks in
+            Task {
                 let downloadTasks = tasks.compactMap {
                     $0 as? URLSessionDownloadTask
                 }
-                self?.registerTasks(downloadTasks)
+                await self.registerTasks(downloadTasks)
                 completionHandler(downloadTasks.count)
             }
         }
     }
 
-    private func handleDownloadStatusChanged(_ download: Download) {
-        queue.update()
-        updateStatus()
+    private func handleDownloadStatusChanged(_ download: Download) async {
+        await queue.update()
+        await updateStatus()
         delegate?.downloadStatusDidChange(download)
     }
 
     /// Calculate the queue status and update if it has changed.
-    private func updateStatus() {
-        let newStatus = Self.calculateStatus(for: queue.downloads)
+    private func updateStatus() async {
+        let newStatus = await Self.calculateStatus(for: queue.downloads)
         if newStatus != state.status {
             if newStatus == .downloading {
                 startMonitoringThroughput()
@@ -162,40 +159,40 @@ public class DownloadManager: NSObject {
     }
 
     /// Adds one or more downloads to the end of the download queue.
-    public func append(_ downloads: [Download]) {
+    public func append(_ downloads: [Download]) async {
         for download in downloads {
             let task = tasks[download.id] ?? createTask(for: download)
             tasks[download.id] = task
             delegate?.download(download, didCreateTask: task)
         }
         state.progress.addChildren(downloads.map(\.progress))
-        queue.append(downloads)
+        await queue.append(downloads)
     }
 
     /// Adds one or more downloads to the end of the download queue.
-    public func append(_ downloads: Download...) {
-        append(downloads)
+    public func append(_ downloads: Download...) async {
+        await append(downloads)
     }
 
     /// Fetch a download from the queue with the given id.
     /// - Parameter id: The id of the download to fetch.
     /// - Returns: A queued download, if one exists.
-    public func download(with id: Download.ID) -> Download? {
-        queue.download(with: id)
+    public func download(with id: Download.ID) async -> Download? {
+        await queue.download(with: id)
     }
 
     /// Remove one or more downloads from the queue. Any in-progress session tasks will be cancelled.
-    public func remove(_ downloads: Set<Download>) {
+    public func remove(_ downloads: Set<Download>) async {
         for download in downloads {
             cancelTask(for: download)
         }
         state.progress.removeChildren(downloads.map(\.progress))
-        queue.remove(downloads)
+        await queue.remove(downloads)
     }
 
     /// Remove one or more downloads from the queue. Any in-progress session tasks will be cancelled.
-    public func remove(_ downloads: Download...) {
-        remove(Set(downloads))
+    public func remove(_ downloads: Download...) async {
+        await remove(Set(downloads))
     }
 
     /// Pause a queued download. The underlying download task will be cancelled, but the download won't be removed from the queue,
@@ -243,7 +240,7 @@ public class DownloadManager: NSObject {
 // MARK: - Task Management.
 
 private extension DownloadManager {
-    func registerTasks(_ tasks: [URLSessionDownloadTask]) {
+    func registerTasks(_ tasks: [URLSessionDownloadTask]) async {
         var downloads = [Download]()
         for task in tasks {
             guard let request = task.currentRequest else {
@@ -255,9 +252,7 @@ private extension DownloadManager {
         }
 
         if !downloads.isEmpty {
-            DispatchQueue.main.async {
-                self.append(downloads)
-            }
+            await self.append(downloads)
         }
     }
 
@@ -278,12 +273,10 @@ private extension DownloadManager {
         guard let task = tasks[download.id] else {
             return
         }
-        task.cancel { [weak self] data in
-            DispatchQueue.main.async {
-                self?.delegate?.download(download, didCancelWithResumeData: data)
-                self?.tasks[download.id] = nil
-                self?.taskIdentifiers[task.taskIdentifier] = nil
-            }
+        task.cancel { data in
+            self.delegate?.download(download, didCancelWithResumeData: data)
+            self.tasks[download.id] = nil
+            self.taskIdentifiers[task.taskIdentifier] = nil
         }
     }
 }
@@ -296,7 +289,9 @@ private extension DownloadManager {
         lastThroughputUnitCount = Double(state.progress.expected) * state.progress.fractionCompleted
 
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateThroughput()
+            Task {
+                await self?.updateThroughput()
+            }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
@@ -322,9 +317,9 @@ private extension DownloadManager {
 // MARK: - DownloadQueueDelegate.
 
 extension DownloadManager: DownloadQueueDelegate {
-    func queueDidChange() {
-        updateStatus()
-        delegate?.downloadQueueDidChange(queue.downloads)
+    func queueDidChange() async {
+        await updateStatus()
+        await delegate?.downloadQueueDidChange(queue.downloads)
     }
 
     func downloadShouldBeginDownloading(_ download: Download) {
@@ -336,13 +331,13 @@ extension DownloadManager: DownloadQueueDelegate {
 // MARK: - URLSessionDownloadDelegate.
 
 extension DownloadManager: URLSessionDownloadDelegate {
-    public func urlSession(
+    nonisolated public func urlSession(
         _: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
-        DispatchQueue.main.async {
-            guard let download = self.taskIdentifiers[task.taskIdentifier] else {
+        Task {
+            guard let download = await self.taskIdentifiers[task.taskIdentifier] else {
                 return
             }
 
@@ -370,53 +365,53 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
-    public func urlSession(
+    nonisolated public func urlSession(
         _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didWriteData _: Int64,
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
-        DispatchQueue.main.async {
-            guard let download = self.taskIdentifiers[downloadTask.taskIdentifier] else {
+        Task {
+            guard let download = await self.taskIdentifiers[downloadTask.taskIdentifier] else {
                 downloadTask.cancel()
                 return
             }
 
             download.progress.received = Int(totalBytesWritten)
             download.progress.expected = Int(totalBytesExpectedToWrite)
-            self.delegate?.downloadDidUpdateProgress(download)
+            await self.delegate?.downloadDidUpdateProgress(download)
         }
     }
 
-    public func urlSession(
+    nonisolated public func urlSession(
         _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        DispatchQueue.main.sync {
-            guard let download = self.taskIdentifiers[downloadTask.taskIdentifier],
+        Task {
+            guard let download = await self.taskIdentifiers[downloadTask.taskIdentifier],
                   let response = downloadTask.response as? HTTPURLResponse,
                   Constants.acceptableStatusCodes.contains(response.statusCode)
             else {
                 return
             }
 
-            self.delegate?.download(download, didFinishDownloadingTo: location)
+            await self.delegate?.download(download, didFinishDownloadingTo: location)
 
             download.status = .finished
         }
     }
 
-    public func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
-        DispatchQueue.main.async {
-            for (id, task) in self.tasks {
-                guard let download = self.queue.download(with: id) else {
+    nonisolated public func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
+        Task {
+            for (id, task) in await self.tasks {
+                guard let download = await self.queue.download(with: id) else {
                     return
                 }
                 download.progress.received = Int(task.countOfBytesReceived)
             }
-            self.delegate?.downloadManagerDidFinishBackgroundDownloads()
+            await self.delegate?.downloadManagerDidFinishBackgroundDownloads()
         }
     }
 }
