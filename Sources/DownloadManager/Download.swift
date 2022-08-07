@@ -5,8 +5,8 @@
 // Created by Lachlan Charlick on 2/3/21.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Represents a single download task that can be added to a `DownloadManager`.
 public class Download: ObservableObject, Identifiable {
@@ -29,7 +29,7 @@ public class Download: ObservableObject, Identifiable {
     ) {
         self.id = id
         self.request = request
-        self.state = .init(
+        state = .init(
             status: status,
             progress: progress
         )
@@ -54,7 +54,7 @@ public class Download: ObservableObject, Identifiable {
 
 public extension Download {
     var statusPublisher: AnyPublisher<DownloadState.Status, Never> {
-        $state.map { $0.status }
+        $state.map(\.status)
             .receive(on: DispatchQueue.main)
             .removeDuplicates()
             .eraseToAnyPublisher()

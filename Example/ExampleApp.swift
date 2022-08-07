@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 19/3/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 private enum Constants {
     static let httpbin = URL(string: "https://httpbin.org")!
@@ -22,8 +22,8 @@ struct DownloadManagerUIApp: App {
         WindowGroup {
             DownloadManagerView(viewModel: viewModel)
                 .onAppear {
-                    viewModel.download((0..<Constants.downloadCount).map { index -> ViewModel.Item in
-                        let size = Int.random(in: 1_000...Constants.maxFileSize)
+                    viewModel.download((0 ..< Constants.downloadCount).map { index -> ViewModel.Item in
+                        let size = Int.random(in: 1000 ... Constants.maxFileSize)
                         return .init(
                             id: index,
                             url: Constants.httpbin.appendingPathComponent("/bytes/\(size)"),

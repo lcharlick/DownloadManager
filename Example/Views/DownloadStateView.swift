@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 struct DownloadStateView: View {
     let status: DownloadState.Status
@@ -38,11 +38,11 @@ struct DownloadStateView_Previews: PreviewProvider {
         VStack {
             DownloadStateView(
                 status: .downloading,
-                progress: .init(expected: 1_000, received: 100)
+                progress: .init(expected: 1000, received: 100)
             )
             DownloadStateView(
                 status: .paused,
-                progress: .init(expected: 1_000, received: 300)
+                progress: .init(expected: 1000, received: 300)
             )
             DownloadStateView(
                 status: .idle,
@@ -50,11 +50,11 @@ struct DownloadStateView_Previews: PreviewProvider {
             )
             DownloadStateView(
                 status: .finished,
-                progress: .init(expected: 1_000, received: 1_000)
+                progress: .init(expected: 1000, received: 1000)
             )
             DownloadStateView(
                 status: .failed(.serverError(statusCode: 500)),
-                progress: .init(expected: 1_000, received: 800)
+                progress: .init(expected: 1000, received: 800)
             )
         }
         .previewLayout(.sizeThatFits)

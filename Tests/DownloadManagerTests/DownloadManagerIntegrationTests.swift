@@ -5,9 +5,9 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-import XCTest
 @testable import DownloadManager
 import Swifter
+import XCTest
 
 final class DownloadManagerIntegrationTests: XCTestCase {
     func testDownloadSingleItem() throws {
@@ -19,7 +19,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             return .ok(.data(data, contentType: "audio/mpeg"))
         }
 
-        let expectation = self.expectation(
+        let expectation = expectation(
             description: "a download should finish"
         )
 
@@ -64,7 +64,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             }
         }
 
-        let expectation = self.expectation(
+        let expectation = expectation(
             description: "both downloads should finish"
         )
 
@@ -106,7 +106,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             return .internalServerError
         }
 
-        let expectation = self.expectation(
+        let expectation = expectation(
             description: "download status should change to `failed`"
         )
 
@@ -116,9 +116,9 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             }
 
             switch item.status {
-            case .failed(let error):
+            case let .failed(error):
                 switch error {
-                case .serverError(statusCode: let code) where code == 500:
+                case let .serverError(statusCode: code) where code == 500:
                     expectation.fulfill()
                 default:
                     break

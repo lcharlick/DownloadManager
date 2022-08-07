@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 28/2/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 struct DownloadManagerView<ViewModel: ViewModelType>: View {
     @ObservedObject var viewModel: ViewModel
@@ -64,18 +64,18 @@ struct DownloadManagerView_Previews: PreviewProvider {
         .init(
             url: URL(string: "http://test/1")!,
             status: .downloading,
-            progress: .init(expected: 100_000, received: 50_000)
+            progress: .init(expected: 100_000, received: 50000)
         ),
         .init(
             url: URL(string: "http://test/2")!,
             status: .idle,
-            progress: .init(expected: 100_000, received: 30_000)
+            progress: .init(expected: 100_000, received: 30000)
         ),
         .init(
             url: URL(string: "http://test/3")!,
             status: .failed(.serverError(statusCode: 500)),
-            progress: .init(expected: 100_000, received: 80_000)
-        )
+            progress: .init(expected: 100_000, received: 80000)
+        ),
     ])
 
     static var previews: some View {
@@ -84,12 +84,12 @@ struct DownloadManagerView_Previews: PreviewProvider {
 }
 
 class PreviewViewModel: ViewModelType {
-    var throughput: Int = 1_000
+    var throughput: Int = 1000
 
     var estimatedTimeRemaining: TimeInterval? = 10
 
     var status = DownloadState.Status.downloading
-    var progress = DownloadProgress(expected: 1_000, received: 500)
+    var progress = DownloadProgress(expected: 1000, received: 500)
 
     let queue: [Download]
 
@@ -97,29 +97,25 @@ class PreviewViewModel: ViewModelType {
         self.queue = queue
     }
 
-    func pause(_ download: Download) {
-    }
+    func pause(_: Download) {}
 
-    func resume(_ download: Download) {
-    }
+    func resume(_: Download) {}
 
-    func cancel(_ downloads: Set<Download.ID>) {
-    }
+    func cancel(_: Set<Download.ID>) {}
 
-    func cancel(at offsets: IndexSet) {
-    }
+    func cancel(at _: IndexSet) {}
 }
 
 extension DownloadState.Error: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .serverError(statusCode: let code):
+        case let .serverError(statusCode: code):
             return "Server error: \(code)"
-        case .transportError(_, localizedDescription: let description):
+        case let .transportError(_, localizedDescription: description):
             return description
-        case .unknown(_, localizedDescription: let description):
+        case let .unknown(_, localizedDescription: description):
             return description
-        case .aggregate(errors: let errors):
+        case let .aggregate(errors: errors):
             return "\(errors.count) errors occurred."
         }
     }

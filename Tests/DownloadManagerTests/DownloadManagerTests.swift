@@ -5,10 +5,10 @@
 //  Created by Lachlan Charlick on 26/2/21.
 //
 
-import XCTest
 import Combine
-import Swifter
 @testable import DownloadManager
+import Swifter
+import XCTest
 
 private let testURL = URL(string: "http://test")!
 
@@ -20,16 +20,15 @@ final class DownloadManagerTests: XCTestCase {
     private var manager: DownloadManager!
 
     override func setUpWithError() throws {
-        self.cancellables = []
-        self.delegate = DelegateSpy { _ in }
-        self.manager = DownloadManager(
+        cancellables = []
+        delegate = DelegateSpy { _ in }
+        manager = DownloadManager(
             sessionConfiguration: .default,
             delegate: delegate
         )
     }
 
-    override func tearDownWithError() throws {
-    }
+    override func tearDownWithError() throws {}
 }
 
 // MARK: - Assertions.
@@ -226,7 +225,7 @@ extension DownloadManagerTests {
             Download(
                 url: testURL,
                 status: .downloading
-            )
+            ),
         ])
     }
 
@@ -288,7 +287,7 @@ extension DownloadManagerTests {
 
         let task = delegate.tasks[download.id]!
 
-        let expectation = self.expectation(description: "task state changes to `canceling`")
+        let expectation = expectation(description: "task state changes to `canceling`")
         expectation.assertForOverFulfill = false
 
         observation = task.observe(\.state, options: [.initial]) { task, _ in
@@ -324,7 +323,7 @@ extension DownloadManagerTests {
 
         assertCurrentQueueEquals([
             .init(url: url1, status: .downloading),
-            .init(url: url2, status: .paused)
+            .init(url: url2, status: .paused),
         ])
         XCTAssertEqual(task.state, .running)
         XCTAssertEqual(delegate.requestedURLs, [url1, url2, url1])
@@ -349,7 +348,7 @@ extension DownloadManagerTests {
 
         let task = delegate.tasks[download.id]!
 
-        let expectation = self.expectation(description: "task state changes to `canceling`")
+        let expectation = expectation(description: "task state changes to `canceling`")
         expectation.assertForOverFulfill = false
 
         observation = task.observe(\.state, options: [.initial]) { task, _ in
@@ -366,7 +365,7 @@ extension DownloadManagerTests {
 
         let task = delegate.tasks[download.id]!
 
-        let expectation = self.expectation(description: "data task state changes to `canceling`")
+        let expectation = expectation(description: "data task state changes to `canceling`")
         expectation.assertForOverFulfill = false
 
         observation = task.observe(\.state, options: [.initial]) { task, _ in
@@ -389,7 +388,7 @@ extension DownloadManagerTests {
 
         manager.remove(download1)
         assertCurrentQueueEquals([
-            Download(url: url2, status: .downloading)
+            Download(url: url2, status: .downloading),
         ])
     }
 
@@ -404,7 +403,7 @@ extension DownloadManagerTests {
 
         assertCurrentQueueEquals([
             Download(url: url1, status: .paused),
-            Download(url: url2, status: .downloading)
+            Download(url: url2, status: .downloading),
         ])
     }
 }
@@ -431,8 +430,8 @@ extension DownloadManagerTests {
         assertQueueChanges([
             [
                 Download(id: download1.id, url: url1, status: .downloading),
-                Download(id: download2.id, url: url2, status: .idle)
-            ]
+                Download(id: download2.id, url: url2, status: .idle),
+            ],
         ])
     }
 
@@ -441,9 +440,9 @@ extension DownloadManagerTests {
         manager.pause(download)
 
         XCTAssertEqual(
-            delegate.queueChanges.map { queue in queue.map { $0.status } },
+            delegate.queueChanges.map { queue in queue.map(\.status) },
             [
-                [.downloading]
+                [.downloading],
             ]
         )
     }
@@ -454,7 +453,7 @@ extension DownloadManagerTests {
 
         assertQueueChanges([
             [Download(url: testURL, status: .downloading)],
-            []
+            [],
         ])
     }
 
@@ -470,10 +469,10 @@ extension DownloadManagerTests {
         assertQueueChanges([
             [
                 Download(url: url1, status: .downloading),
-                Download(url: url2, status: .idle)
+                Download(url: url2, status: .idle),
             ],
             // All downloads were cancelled a single transaction.
-            []
+            [],
         ]
         )
     }
@@ -481,7 +480,7 @@ extension DownloadManagerTests {
     func testCancelProducesResumeData() throws {
         let download = try manager.append(testURL)
 
-        let expectation = self.expectation(description: "resume data should be produced")
+        let expectation = expectation(description: "resume data should be produced")
 
         manager.remove(download)
 
@@ -501,7 +500,7 @@ extension DownloadManagerTests {
         XCTAssertEqual(delegate.statusChanges, [
             .downloading,
             .paused,
-            .idle
+            .idle,
         ])
     }
 }
@@ -520,7 +519,7 @@ extension DownloadManager {
     @discardableResult
     func append(_ url: URL, estimatedSize: Int = 0) throws -> Download {
         let download = try register(url, estimatedSize: estimatedSize)
-        self.append(download)
+        append(download)
         return download
     }
 }

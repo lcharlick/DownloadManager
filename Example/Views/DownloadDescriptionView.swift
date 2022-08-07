@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 struct DownloadDescriptionView: View {
     let status: DownloadState.Status
@@ -31,7 +31,7 @@ struct DownloadDescriptionView: View {
     var body: some View {
         Group {
             switch status {
-            case .failed(let error):
+            case let .failed(error):
                 Text("\(error.description)")
                     .foregroundColor(.red)
             default:
@@ -45,7 +45,6 @@ struct DownloadDescriptionView: View {
                         Text(totalUnitDescription)
                             .font(Font.system(.subheadline).monospacedDigit())
                     }
-
                 }
                 .foregroundColor(Color(UIColor.secondaryLabel))
             }
@@ -60,7 +59,7 @@ struct DownloadDescriptionView_Previews: PreviewProvider {
             DownloadDescriptionView(
                 status: .downloading,
                 totalUnitCount: 100_000,
-                completedUnitCount: 50_000
+                completedUnitCount: 50000
             )
             DownloadDescriptionView(
                 status: .paused,

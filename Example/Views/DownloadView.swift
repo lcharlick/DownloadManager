@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 struct DownloadView: View {
     @ObservedObject var download: Download
@@ -34,7 +34,7 @@ struct DownloadItemView_Previews: PreviewProvider {
             download: Download(
                 url: URL(string: "http://test")!,
                 status: .downloading,
-                progress: .init(expected: 1_000, received: 300)
+                progress: .init(expected: 1000, received: 300)
             ),
             pauseHandler: {},
             resumeHandler: {}

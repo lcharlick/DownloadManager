@@ -1,13 +1,13 @@
 //
 //  DownloadProgressTests.swift
-//  
+//
 //
 //  Created by Lachlan Charlick on 3/3/21.
 //
 
-import XCTest
 import Combine
 @testable import DownloadManager
+import XCTest
 
 final class DownloadProgressTests: XCTestCase {
     func testFractionCompleted() {
@@ -89,37 +89,37 @@ final class DownloadProgressTests: XCTestCase {
     }
 
     /*
-    private var cancellable: AnyCancellable?
+     private var cancellable: AnyCancellable?
 
-    func testThrottle() {
-        let progress = DownloadProgress(expected: 2)
-        progress.throttleInterval = .milliseconds(100)
+     func testThrottle() {
+         let progress = DownloadProgress(expected: 2)
+         progress.throttleInterval = .milliseconds(100)
 
-        let start = Date()
-        var received: Date?
+         let start = Date()
+         var received: Date?
 
-        let expectation = self.expectation(description: "it should publish a new fraction after 100ms")
+         let expectation = self.expectation(description: "it should publish a new fraction after 100ms")
 
-        cancellable = progress.$fractionCompleted.sink { fraction in
-            guard fraction == 1 else { return }
-            received = Date()
-            expectation.fulfill()
-        }
+         cancellable = progress.$fractionCompleted.sink { fraction in
+             guard fraction == 1 else { return }
+             received = Date()
+             expectation.fulfill()
+         }
 
-        progress.received = 0
-        progress.received = 1
-        progress.received = 2
+         progress.received = 0
+         progress.received = 1
+         progress.received = 2
 
-        waitForExpectations(timeout: 0.15)
+         waitForExpectations(timeout: 0.15)
 
-        let interval = received.map { $0.timeIntervalSince(start) } ?? 0
-        XCTAssertGreaterThanOrEqual(interval, 0.1)
-    }
-    */
+         let interval = received.map { $0.timeIntervalSince(start) } ?? 0
+         XCTAssertGreaterThanOrEqual(interval, 0.1)
+     }
+     */
 
     func testPerformance() {
-        let children = (0..<1000).map { _ -> DownloadProgress in
-            DownloadProgress(expected: .random(in: 0...100), received: .random(in: 0...100))
+        let children = (0 ..< 1000).map { _ -> DownloadProgress in
+            DownloadProgress(expected: .random(in: 0 ... 100), received: .random(in: 0 ... 100))
         }
 
         let parent = DownloadProgress(children: children)

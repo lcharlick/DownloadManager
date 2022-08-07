@@ -82,7 +82,7 @@ class DownloadQueue {
             cache[download.id] = nil
         }
 
-        self.downloads = downloads.filter { !downloadsToRemove.contains($0) }
+        downloads = downloads.filter { !downloadsToRemove.contains($0) }
 
         delegate?.queueDidChange()
         update()

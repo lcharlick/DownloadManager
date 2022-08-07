@@ -13,7 +13,7 @@ public class DownloadManager: NSObject {
         delegate: self
     )
 
-    private(set) public var state = DownloadState()
+    public private(set) var state = DownloadState()
 
     private let sessionConfiguration: URLSessionConfiguration
     private lazy var session = URLSession(
@@ -60,7 +60,7 @@ public class DownloadManager: NSObject {
         self.delegate = delegate
         super.init()
 
-        self.downloadStatusChangedObservation = NotificationCenter.default.addObserver(
+        downloadStatusChangedObservation = NotificationCenter.default.addObserver(
             forName: .downloadStatusChanged,
             object: nil,
             queue: nil
@@ -104,7 +104,7 @@ public class DownloadManager: NSObject {
                 stopMonitoringThroughput()
             }
 
-            self.state.status = newStatus
+            state.status = newStatus
             delegate?.downloadManagerStatusDidChange(state.status)
         }
     }
@@ -133,7 +133,7 @@ public class DownloadManager: NSObject {
 
         let errors = downloadsByStatus.reduce(into: Set<DownloadState.Error>()) { errors, value in
             switch value.key {
-            case .failed(let error):
+            case let .failed(error):
                 errors.insert(error)
             default:
                 break
@@ -149,9 +149,7 @@ public class DownloadManager: NSObject {
 
     /// Calculate the progress of a subset of downloads in the queue.
     public static func progress(of downloads: [Download]) -> DownloadProgress {
-        let progress = DownloadProgress(children: downloads.map {
-            $0.progress
-        })
+        let progress = DownloadProgress(children: downloads.map(\.progress))
         return progress
     }
 
@@ -170,7 +168,7 @@ public class DownloadManager: NSObject {
             tasks[download.id] = task
             delegate?.download(download, didCreateTask: task)
         }
-        state.progress.addChildren(downloads.map { $0.progress })
+        state.progress.addChildren(downloads.map(\.progress))
         queue.append(downloads)
     }
 
@@ -191,7 +189,7 @@ public class DownloadManager: NSObject {
         for download in downloads {
             cancelTask(for: download)
         }
-        state.progress.removeChildren(downloads.map { $0.progress })
+        state.progress.removeChildren(downloads.map(\.progress))
         queue.remove(downloads)
     }
 
@@ -238,7 +236,7 @@ public class DownloadManager: NSObject {
     }
 
     enum Constants {
-        static let acceptableStatusCodes = Set(200..<300)
+        static let acceptableStatusCodes = Set(200 ..< 300)
     }
 }
 
@@ -294,8 +292,8 @@ private extension DownloadManager {
 
 private extension DownloadManager {
     func startMonitoringThroughput() {
-        self.lastThroughputCalculationTime = Date()
-        self.lastThroughputUnitCount = Double(state.progress.expected)*state.progress.fractionCompleted
+        lastThroughputCalculationTime = Date()
+        lastThroughputUnitCount = Double(state.progress.expected) * state.progress.fractionCompleted
 
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.updateThroughput()
@@ -311,13 +309,13 @@ private extension DownloadManager {
 
     func updateThroughput() {
         let now = Date()
-        let unitCount = Double(state.progress.expected)*state.progress.fractionCompleted
+        let unitCount = Double(state.progress.expected) * state.progress.fractionCompleted
         let unitCountDelta = unitCount - lastThroughputUnitCount
         let timeDelta = now.timeIntervalSince(lastThroughputCalculationTime)
-        let throughput = Int(Double(unitCountDelta)/timeDelta)
+        let throughput = Int(Double(unitCountDelta) / timeDelta)
         delegate?.downloadThroughputDidChange(throughput)
-        self.lastThroughputCalculationTime = now
-        self.lastThroughputUnitCount = unitCount
+        lastThroughputCalculationTime = now
+        lastThroughputUnitCount = unitCount
     }
 }
 
@@ -339,7 +337,7 @@ extension DownloadManager: DownloadQueueDelegate {
 
 extension DownloadManager: URLSessionDownloadDelegate {
     public func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
@@ -373,9 +371,9 @@ extension DownloadManager: URLSessionDownloadDelegate {
     }
 
     public func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         downloadTask: URLSessionDownloadTask,
-        didWriteData bytesWritten: Int64,
+        didWriteData _: Int64,
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
@@ -392,14 +390,15 @@ extension DownloadManager: URLSessionDownloadDelegate {
     }
 
     public func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
         DispatchQueue.main.sync {
             guard let download = self.taskIdentifiers[downloadTask.taskIdentifier],
                   let response = downloadTask.response as? HTTPURLResponse,
-                  Constants.acceptableStatusCodes.contains(response.statusCode) else {
+                  Constants.acceptableStatusCodes.contains(response.statusCode)
+            else {
                 return
             }
 
@@ -409,7 +408,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
-    public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+    public func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
         DispatchQueue.main.async {
             for (id, task) in self.tasks {
                 guard let download = self.queue.download(with: id) else {

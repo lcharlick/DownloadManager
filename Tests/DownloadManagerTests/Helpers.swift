@@ -5,10 +5,10 @@
 //  Created by Lachlan Charlick on 26/2/21.
 //
 
-import XCTest
 import Difference
-import Swifter
 @testable import DownloadManager
+import Swifter
+import XCTest
 
 public func XCTAssertEqual<T: Equatable>(_ received: @autoclosure () throws -> T, _ expected: @autoclosure () throws -> T, file: StaticString = #filePath, line: UInt = #line) {
     do {
@@ -74,11 +74,9 @@ class DelegateSpy: DownloadManagerDelegate {
         statusChanges.append(status)
     }
 
-    func downloadDidUpdateProgress(_ download: Download) {
-    }
+    func downloadDidUpdateProgress(_: Download) {}
 
-    func downloadThroughputDidChange(_ throughput: Int) {
-    }
+    func downloadThroughputDidChange(_: Int) {}
 
     func downloadStatusDidChange(_ download: Download) {
         downloadStatusDidChangeHandler(download)
@@ -89,8 +87,7 @@ class DelegateSpy: DownloadManagerDelegate {
         tasks[download.id] = task
     }
 
-    func download(_ download: Download, didReconnectTask: URLSessionDownloadTask) {
-    }
+    func download(_: Download, didReconnectTask _: URLSessionDownloadTask) {}
 
     func downloadQueueDidChange(_ downloads: [Download]) {
         queueChanges.append(downloads.map {
@@ -105,15 +102,13 @@ class DelegateSpy: DownloadManagerDelegate {
         resumeData[download.id] = data ?? Data()
     }
 
-    func download(_ download: Download, didFinishDownloadingTo location: URL) {
-    }
+    func download(_: Download, didFinishDownloadingTo _: URL) {}
 
     func resumeDataForDownload(_ download: Download) -> Data? {
         resumeData[download.id]
     }
 
-    func downloadManagerDidFinishBackgroundDownloads() {
-    }
+    func downloadManagerDidFinishBackgroundDownloads() {}
 }
 
 extension HttpServer {

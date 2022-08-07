@@ -5,17 +5,17 @@
 //  Created by Lachlan Charlick on 3/3/21.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 public class DownloadProgress: Identifiable, ObservableObject {
     public let id = UUID()
 
     @Published
-    private(set) public var fractionCompleted: Double = 0
+    public private(set) var fractionCompleted: Double = 0
     private let fraction = PassthroughSubject<Double, Never>()
 
-    public var throttleInterval: DispatchQueue.SchedulerTimeType.Stride? = nil {
+    public var throttleInterval: DispatchQueue.SchedulerTimeType.Stride? {
         didSet {
             observeChanges()
         }
@@ -36,7 +36,7 @@ public class DownloadProgress: Identifiable, ObservableObject {
         }
     }
 
-    internal(set) public var received: Int {
+    public internal(set) var received: Int {
         get {
             _received
         }
@@ -81,18 +81,18 @@ public class DownloadProgress: Identifiable, ObservableObject {
             fraction.send(0)
             return
         }
-        fraction.send(Double(received)/Double(expected))
+        fraction.send(Double(received) / Double(expected))
     }
 
     private func observeChanges() {
         if let interval = throttleInterval {
-            self.updateFractionCancellable = fraction
+            updateFractionCancellable = fraction
                 .throttle(for: interval, scheduler: DispatchQueue.main, latest: true).sink { [weak self] fraction in
                     self?.fractionCompleted = fraction
                 }
         } else {
             // Send values synchronously.
-            self.updateFractionCancellable = fraction.sink { [weak self] fraction in
+            updateFractionCancellable = fraction.sink { [weak self] fraction in
                 self?.fractionCompleted = fraction
             }
         }

@@ -8,22 +8,25 @@ let package = Package(
     products: [
         .library(
             name: "DownloadManager",
-            targets: ["DownloadManager"])
+            targets: ["DownloadManager"]
+        ),
     ],
     dependencies: [
         .package(name: "Difference", url: "https://github.com/krzysztofzablocki/Difference.git", .branch("master")),
-        .package(name: "Swifter", url: "https://github.com/httpswift/swifter.git", .branch("stable"))
+        .package(name: "Swifter", url: "https://github.com/httpswift/swifter.git", .branch("stable")),
     ],
     targets: [
         .target(
             name: "DownloadManager",
-            dependencies: []),
+            dependencies: []
+        ),
         .testTarget(
             name: "DownloadManagerTests",
             dependencies: [
                 "DownloadManager",
                 "Difference",
-                "Swifter"
-            ])
+                "Swifter",
+            ]
+        ),
     ]
 )

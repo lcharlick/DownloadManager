@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-import SwiftUI
 import DownloadManager
+import SwiftUI
 
 struct DownloadActionButton: View {
     let action: DownloadState.Status.Action

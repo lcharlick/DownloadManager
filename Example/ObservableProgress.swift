@@ -5,9 +5,9 @@
 //  Created by Lachlan Charlick on 3/3/21.
 //
 
-import Foundation
-import DownloadManager
 import Combine
+import DownloadManager
+import Foundation
 
 class ObservableProgress: ObservableObject {
     private let _progress: Progress = .download(fraction: 0)

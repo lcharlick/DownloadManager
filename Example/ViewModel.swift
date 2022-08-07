@@ -5,8 +5,8 @@
 //  Created by Lachlan Charlick on 19/3/21.
 //
 
-import Foundation
 import DownloadManager
+import Foundation
 
 protocol ViewModelType: ObservableObject {
     var status: DownloadState.Status { get }
@@ -38,22 +38,22 @@ class ViewModel: ViewModelType, ObservableObject {
 
     init(manager: DownloadManager = .init(sessionConfiguration: .default)) {
         self.manager = manager
-        self.status = manager.state.status
-        self.progress = manager.state.progress
+        status = manager.state.status
+        progress = manager.state.progress
         manager.delegate = self
 
         /*
-        self.observation = _progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                self.progress.totalUnitCount = progress.totalUnitCount
-                self.progress.completedUnitCount = min(
-                    Int64(Double(progress.totalUnitCount)*progress.fractionCompleted),
-                    progress.totalUnitCount
-                )
-            }
-        }
-        */
+         self.observation = _progress.observe(\.fractionCompleted) { [weak self] progress, _ in
+             guard let self = self else { return }
+             DispatchQueue.main.async {
+                 self.progress.totalUnitCount = progress.totalUnitCount
+                 self.progress.completedUnitCount = min(
+                     Int64(Double(progress.totalUnitCount)*progress.fractionCompleted),
+                     progress.totalUnitCount
+                 )
+             }
+         }
+         */
     }
 
     func download(_ items: [Item]) {
@@ -91,7 +91,7 @@ class ViewModel: ViewModelType, ObservableObject {
 extension ViewModel: DownloadManagerDelegate {
     func downloadQueueDidChange(_ items: [Download]) {
         print("queue changed (\(items.count))")
-        self.queue = items
+        queue = items
     }
 
     func downloadManagerStatusDidChange(_ status: DownloadState.Status) {
@@ -99,16 +99,16 @@ extension ViewModel: DownloadManagerDelegate {
         self.status = status
     }
 
-    func downloadDidUpdateProgress(_ download: Download) {
+    func downloadDidUpdateProgress(_: Download) {
         // print("progress updated: \(download.progress.fractionCompleted)")
     }
 
     func downloadThroughputDidChange(_ throughput: Int) {
         self.throughput = throughput
         if throughput > 0 {
-            self.estimatedTimeRemaining = Double(progress.expected - progress.received)/Double(throughput)
+            estimatedTimeRemaining = Double(progress.expected - progress.received) / Double(throughput)
         } else {
-            self.estimatedTimeRemaining = nil
+            estimatedTimeRemaining = nil
         }
     }
 
@@ -117,13 +117,11 @@ extension ViewModel: DownloadManagerDelegate {
         download.objectWillChange.send()
     }
 
-    func download(_ download: Download, didCreateTask: URLSessionDownloadTask) {
+    func download(_ download: Download, didCreateTask _: URLSessionDownloadTask) {
         print("created task for url: \(download.url)")
     }
 
-    func download(_ download: Download, didReconnectTask: URLSessionDownloadTask) {
-
-    }
+    func download(_: Download, didReconnectTask _: URLSessionDownloadTask) {}
 
     func download(_ download: Download, didCancelWithResumeData data: Data?) {
         if let data = data {
@@ -137,7 +135,7 @@ extension ViewModel: DownloadManagerDelegate {
         resumeData[download.id]
     }
 
-    func download(_ download: Download, didFinishDownloadingTo location: URL) {
+    func download(_: Download, didFinishDownloadingTo _: URL) {
         // TODO: move file from temporary location.
     }
 
@@ -156,7 +154,7 @@ extension Progress {
         progress.kind = .file
         progress.fileOperationKind = .downloading
         progress.throughput = throughput
-        progress.completedUnitCount = Int64(100.0*fraction)
+        progress.completedUnitCount = Int64(100.0 * fraction)
         progress.totalUnitCount = totalUnitCount
         return progress
     }
