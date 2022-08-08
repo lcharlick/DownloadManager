@@ -81,42 +81,34 @@ extension DownloadManagerTests {
 
 extension DownloadManagerTests {
     func testInitialStatus() async {
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .idle)
     }
 
     func testStatusChangesIfItemAddedToQueue() async throws {
         try await manager.append(testURL)
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .downloading)
     }
 
     func testStatusChangesToIdleIfItemRemovedFromQueue() async throws {
         let download = try await manager.append(testURL)
         await manager.remove(download)
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .idle)
     }
 
     func testStatusChangesToPausedIfOnlyItemPaused() async throws {
         let download = try await manager.append(testURL)
         await manager.pause(download)
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .paused)
-    }
-
-    func testStatusIsIdleIfAnyItemHasIdleStatus() async throws {
-        let download = try await manager.append(testURL)
-        try await manager.append(URL(string: "http://download2")!)
-        await manager.pause(download)
-        let status = await manager.state.status
-        XCTAssertEqual(status, .downloading)
     }
 
     func testStatusChangesToFinishedIfOnlyItemFinished() async throws {
         let download = try await manager.append(testURL)
         download.status = .finished
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .finished)
     }
 
@@ -125,7 +117,7 @@ extension DownloadManagerTests {
         let download2 = try await manager.append(URL(string: "http://test2")!)
         download1.status = .finished
         await manager.pause(download2)
-        let status = await manager.state.status
+        let status = await manager.status
         XCTAssertEqual(status, .paused)
     }
 
@@ -134,9 +126,8 @@ extension DownloadManagerTests {
         let download2 = try await manager.append(URL(string: "http://test2")!)
         download1.status = .finished
         download2.status = .failed(.serverError(statusCode: 500))
-        let status = await manager.state.status
-        XCTAssertEqual(status, .failed(.aggregate(errors: [.serverError(statusCode: 500)]))
-        )
+        let status = await manager.status
+        XCTAssertEqual(status, .failed(.aggregate(errors: [.serverError(statusCode: 500)])))
     }
 }
 
@@ -144,7 +135,7 @@ extension DownloadManagerTests {
 
 extension DownloadManagerTests {
     func testInitialProgress() async {
-        let progress = await manager.state.progress
+        let progress = await manager.progress
 
         XCTAssertEqual(progress.expected, 0)
         XCTAssertEqual(progress.received, 0)
@@ -152,7 +143,7 @@ extension DownloadManagerTests {
 
     func testProgressUpdatedWhenItemAddedToQueue() async throws {
         try await manager.append(testURL, estimatedSize: 100)
-        let progress = await manager.state.progress
+        let progress = await manager.progress
 
         XCTAssertEqual(progress.expected, 100)
         XCTAssertEqual(progress.received, 0)
@@ -164,7 +155,7 @@ extension DownloadManagerTests {
 
         download.progress.received = 100
 
-        let progress = await manager.state.progress
+        let progress = await manager.progress
 
         XCTAssertEqual(progress.received, 100)
         XCTAssertEqual(progress.expected, 200)
@@ -179,7 +170,7 @@ extension DownloadManagerTests {
 
         await manager.remove(download1)
 
-        let progress1 = await manager.state.progress
+        let progress1 = await manager.progress
 
         XCTAssertEqual(progress1.received, 0)
         XCTAssertEqual(progress1.expected, 100)
@@ -187,7 +178,7 @@ extension DownloadManagerTests {
 
         await manager.remove(download2)
 
-        let progress2 = await manager.state.progress
+        let progress2 = await manager.progress
 
         XCTAssertEqual(progress2.received, 0)
         XCTAssertEqual(progress2.expected, 0)
@@ -495,30 +486,37 @@ extension DownloadManagerTests {
 
     func testCancelProducesResumeData() async throws {
         let download = try await manager.append(testURL)
-
-        let expectation = expectation(description: "resume data should be produced")
-
         await manager.remove(download)
-
-        delegate.$resumeData.dropFirst().sink { _ in
-            expectation.fulfill()
-        }.store(in: &cancellables)
-
-        await waitForExpectations(timeout: 0.1)
-
         XCTAssertNotNil(delegate.resumeData[download.id])
     }
 
+    /*
     func testStatusChanges() async throws {
+        var statusChanges = [DownloadState.Status]()
+
+        let delegate = DelegateSpy { _ in
+            self.manager.status
+        }
+
+        await manager.setDelegate(delegate)
+
+
         let download = try await manager.append(testURL)
         await manager.pause(download)
         await manager.remove(download)
+
+        let manager = DownloadManager(
+            sessionConfiguration: .default,
+            delegate: delegate
+        )
+
         XCTAssertEqual(delegate.statusChanges, [
             .downloading,
             .paused,
             .idle,
         ])
     }
+    */
 }
 
 extension DownloadManager {

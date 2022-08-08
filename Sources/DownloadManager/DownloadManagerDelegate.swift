@@ -8,9 +8,6 @@
 import Foundation
 
 public protocol DownloadManagerDelegate: AnyObject {
-    /// Tells the delegate when the download manager status has changed.
-    func downloadManagerStatusDidChange(_ status: DownloadState.Status)
-
     /// Tells the delegate when the download queue has changed.
     func downloadQueueDidChange(_ downloads: [Download])
 

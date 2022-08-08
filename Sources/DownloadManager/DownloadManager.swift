@@ -13,7 +13,16 @@ public actor DownloadManager: NSObject {
         delegate: self
     )
 
-    public private(set) var state = DownloadState()
+//    public private(set) var state = DownloadState()
+
+    private(set) public var progress = DownloadProgress()
+
+    public var status: DownloadState.Status {
+        get async {
+            let downloads = await queue.downloads
+            return Self.calculateStatus(for: downloads)
+        }
+    }
 
     private let sessionConfiguration: URLSessionConfiguration
     private lazy var session = URLSession(
@@ -22,7 +31,11 @@ public actor DownloadManager: NSObject {
         delegateQueue: nil
     )
 
-    public weak var delegate: DownloadManagerDelegate?
+    private(set) public weak var delegate: DownloadManagerDelegate?
+
+    public func setDelegate(_ delegate: DownloadManagerDelegate?) {
+        self.delegate = delegate
+    }
 
     /// The maximum number of downloads that can simultaneously have the `downloading` status.
     private(set) public var maxConcurrentDownloads: Int = 1
@@ -63,11 +76,11 @@ public actor DownloadManager: NSObject {
             object: nil,
             queue: nil
         ) { [weak self] notification in
-            guard let download = notification.object as? Download else {
+            guard let self = self, let download = notification.object as? Download else {
                 return
             }
             Task {
-                await self?.handleDownloadStatusChanged(download)
+                await self.handleDownloadStatusChanged(download)
             }
         }
     }
@@ -87,24 +100,23 @@ public actor DownloadManager: NSObject {
 
     private func handleDownloadStatusChanged(_ download: Download) async {
         await queue.update()
-        await updateStatus()
         delegate?.downloadStatusDidChange(download)
     }
 
     /// Calculate the queue status and update if it has changed.
-    private func updateStatus() async {
-        let newStatus = await Self.calculateStatus(for: queue.downloads)
-        if newStatus != state.status {
-            if newStatus == .downloading {
-                startMonitoringThroughput()
-            } else if state.status == .downloading {
-                stopMonitoringThroughput()
-            }
-
-            state.status = newStatus
-            delegate?.downloadManagerStatusDidChange(state.status)
-        }
-    }
+//    private func updateStatus() async {
+//        let newStatus = await Self.calculateStatus(for: queue.downloads)
+//        if newStatus != state.status {
+//            if newStatus == .downloading {
+//                startMonitoringThroughput()
+//            } else if state.status == .downloading {
+//                stopMonitoringThroughput()
+//            }
+//
+//            state.status = newStatus
+//            delegate?.downloadManagerStatusDidChange(state.status)
+//        }
+//    }
 
     /// Calculate the aggregate status for a subset of downloads in the queue.
     public static func calculateStatus(for downloads: [Download]) -> DownloadState.Status {
@@ -165,7 +177,7 @@ public actor DownloadManager: NSObject {
             tasks[download.id] = task
             delegate?.download(download, didCreateTask: task)
         }
-        state.progress.addChildren(downloads.map(\.progress))
+        progress.addChildren(downloads.map(\.progress))
         await queue.append(downloads)
     }
 
@@ -184,9 +196,9 @@ public actor DownloadManager: NSObject {
     /// Remove one or more downloads from the queue. Any in-progress session tasks will be cancelled.
     public func remove(_ downloads: Set<Download>) async {
         for download in downloads {
-            cancelTask(for: download)
+            await cancelTask(for: download)
         }
-        state.progress.removeChildren(downloads.map(\.progress))
+        progress.removeChildren(downloads.map(\.progress))
         await queue.remove(downloads)
     }
 
@@ -199,10 +211,10 @@ public actor DownloadManager: NSObject {
     /// and can be resumed at a later time.
     /// If supported, the delegate will receive resume data via the `didCancelWithResumeData` method.
     /// See https://developer.apple.com/documentation/foundation/url_loading_system/pausing_and_resuming_downloads for more information.
-    public func pause(_ download: Download) {
+    public func pause(_ download: Download) async {
         guard download.status != .finished else { return }
         download.status = .paused
-        cancelTask(for: download)
+        await cancelTask(for: download)
     }
 
     /// Resume a paused or failed download.
@@ -269,15 +281,16 @@ private extension DownloadManager {
         return task
     }
 
-    func cancelTask(for download: Download) {
+    func cancelTask(for download: Download) async {
         guard let task = tasks[download.id] else {
             return
         }
-        task.cancel { data in
-            self.delegate?.download(download, didCancelWithResumeData: data)
-            self.tasks[download.id] = nil
-            self.taskIdentifiers[task.taskIdentifier] = nil
-        }
+
+        let data = await task.cancelByProducingResumeData()
+
+        self.delegate?.download(download, didCancelWithResumeData: data)
+        self.tasks[download.id] = nil
+        self.taskIdentifiers[task.taskIdentifier] = nil
     }
 }
 
@@ -286,11 +299,12 @@ private extension DownloadManager {
 private extension DownloadManager {
     func startMonitoringThroughput() {
         lastThroughputCalculationTime = Date()
-        lastThroughputUnitCount = Double(state.progress.expected) * state.progress.fractionCompleted
+        lastThroughputUnitCount = Double(progress.expected) * progress.fractionCompleted
 
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
             Task {
-                await self?.updateThroughput()
+                await self.updateThroughput()
             }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -304,7 +318,7 @@ private extension DownloadManager {
 
     func updateThroughput() {
         let now = Date()
-        let unitCount = Double(state.progress.expected) * state.progress.fractionCompleted
+        let unitCount = Double(progress.expected) * progress.fractionCompleted
         let unitCountDelta = unitCount - lastThroughputUnitCount
         let timeDelta = now.timeIntervalSince(lastThroughputCalculationTime)
         let throughput = Int(Double(unitCountDelta) / timeDelta)
@@ -318,7 +332,6 @@ private extension DownloadManager {
 
 extension DownloadManager: DownloadQueueDelegate {
     func queueDidChange() async {
-        await updateStatus()
         await delegate?.downloadQueueDidChange(queue.downloads)
     }
 
