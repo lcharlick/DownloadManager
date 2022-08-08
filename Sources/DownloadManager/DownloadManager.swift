@@ -9,11 +9,7 @@ import Foundation
 
 /// Manages a queue of http download tasks.
 public actor DownloadManager: NSObject {
-    lazy var queue = DownloadQueue(
-        delegate: self
-    )
-
-//    public private(set) var state = DownloadState()
+    lazy var queue = DownloadQueue(delegate: self)
 
     private(set) public var progress = DownloadProgress()
 
@@ -100,7 +96,7 @@ public actor DownloadManager: NSObject {
 
     private func handleDownloadStatusChanged(_ download: Download) async {
         await queue.update()
-        delegate?.downloadStatusDidChange(download)
+        await delegate?.downloadStatusDidChange(download)
     }
 
     /// Calculate the queue status and update if it has changed.
@@ -173,9 +169,14 @@ public actor DownloadManager: NSObject {
     /// Adds one or more downloads to the end of the download queue.
     public func append(_ downloads: [Download]) async {
         for download in downloads {
-            let task = tasks[download.id] ?? createTask(for: download)
+            let task: URLSessionDownloadTask
+            if let cachedTask = tasks[download.id] {
+                task = cachedTask
+            } else {
+                task = await createTask(for: download)
+            }
             tasks[download.id] = task
-            delegate?.download(download, didCreateTask: task)
+            await delegate?.download(download, didCreateTask: task)
         }
         progress.addChildren(downloads.map(\.progress))
         await queue.append(downloads)
@@ -218,11 +219,11 @@ public actor DownloadManager: NSObject {
     }
 
     /// Resume a paused or failed download.
-    public func resume(_ download: Download) {
+    public func resume(_ download: Download) async {
         guard download.status != .finished else { return }
-        let task = createTask(for: download)
+        let task = await createTask(for: download)
         tasks[download.id] = task
-        delegate?.download(download, didCreateTask: task)
+        await delegate?.download(download, didCreateTask: task)
         download.status = .idle
     }
 
@@ -232,16 +233,16 @@ public actor DownloadManager: NSObject {
     /// - Parameters:
     ///   - download: The download to update.
     ///   - request: The new request object.
-    public func update(_ download: Download, with request: URLRequest) {
+    public func update(_ download: Download, with request: URLRequest) async {
         if let task = tasks[download.id] {
             task.cancel()
             taskIdentifiers[task.taskIdentifier] = nil
         }
         download.request = request
-        let newTask = createTask(for: download)
+        let newTask = await createTask(for: download)
         tasks[download.id] = newTask
         taskIdentifiers[newTask.taskIdentifier] = download
-        delegate?.download(download, didCreateTask: newTask)
+        await delegate?.download(download, didCreateTask: newTask)
     }
 
     enum Constants {
@@ -259,7 +260,7 @@ private extension DownloadManager {
                 continue
             }
             let download = Download(request: request, progress: .init())
-            delegate?.download(download, didReconnectTask: task)
+            await delegate?.download(download, didReconnectTask: task)
             downloads.append(download)
         }
 
@@ -268,10 +269,10 @@ private extension DownloadManager {
         }
     }
 
-    func createTask(for download: Download) -> URLSessionDownloadTask {
+    func createTask(for download: Download) async -> URLSessionDownloadTask {
         let task: URLSessionDownloadTask
         // Check if the delegate has resume data for this download.
-        if let resumeData = delegate?.resumeDataForDownload(download) {
+        if let resumeData = await delegate?.resumeDataForDownload(download) {
             task = session.downloadTask(withResumeData: resumeData)
         } else {
             task = session.downloadTask(with: download.request)
@@ -288,7 +289,7 @@ private extension DownloadManager {
 
         let data = await task.cancelByProducingResumeData()
 
-        self.delegate?.download(download, didCancelWithResumeData: data)
+        await self.delegate?.download(download, didCancelWithResumeData: data)
         self.tasks[download.id] = nil
         self.taskIdentifiers[task.taskIdentifier] = nil
     }
@@ -296,8 +297,8 @@ private extension DownloadManager {
 
 // MARK: - Throughput.
 
-private extension DownloadManager {
-    func startMonitoringThroughput() {
+extension DownloadManager {
+    public func startMonitoringThroughput() {
         lastThroughputCalculationTime = Date()
         lastThroughputUnitCount = Double(progress.expected) * progress.fractionCompleted
 
@@ -311,18 +312,18 @@ private extension DownloadManager {
         self.timer = timer
     }
 
-    func stopMonitoringThroughput() {
+    public func stopMonitoringThroughput() async {
         timer?.invalidate()
-        delegate?.downloadThroughputDidChange(0)
+        await delegate?.downloadThroughputDidChange(0)
     }
 
-    func updateThroughput() {
+    private func updateThroughput() async {
         let now = Date()
         let unitCount = Double(progress.expected) * progress.fractionCompleted
         let unitCountDelta = unitCount - lastThroughputUnitCount
         let timeDelta = now.timeIntervalSince(lastThroughputCalculationTime)
         let throughput = Int(Double(unitCountDelta) / timeDelta)
-        delegate?.downloadThroughputDidChange(throughput)
+        await delegate?.downloadThroughputDidChange(throughput)
         lastThroughputCalculationTime = now
         lastThroughputUnitCount = unitCount
     }
