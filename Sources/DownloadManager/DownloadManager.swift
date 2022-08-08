@@ -97,6 +97,12 @@ public actor DownloadManager: NSObject {
     private func handleDownloadStatusChanged(_ download: Download) async {
         await queue.update()
         await delegate?.downloadStatusDidChange(download)
+
+        if await self.status == .downloading {
+            startMonitoringThroughput()
+        } else {
+            await stopMonitoringThroughput()
+        }
     }
 
     /// Calculate the queue status and update if it has changed.
@@ -299,6 +305,7 @@ private extension DownloadManager {
 
 extension DownloadManager {
     public func startMonitoringThroughput() {
+        guard timer == nil else { return }
         lastThroughputCalculationTime = Date()
         lastThroughputUnitCount = Double(progress.expected) * progress.fractionCompleted
 
@@ -314,6 +321,7 @@ extension DownloadManager {
 
     public func stopMonitoringThroughput() async {
         timer?.invalidate()
+        timer = nil
         await delegate?.downloadThroughputDidChange(0)
     }
 
