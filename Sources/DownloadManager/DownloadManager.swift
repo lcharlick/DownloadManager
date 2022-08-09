@@ -311,7 +311,7 @@ extension DownloadManager {
 
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            Task {
+            Task { @MainActor in
                 await self.updateThroughput()
             }
         }
@@ -358,7 +358,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
-        Task {
+        Task { @MainActor in
             guard let download = await self.taskIdentifiers[task.taskIdentifier] else {
                 return
             }
@@ -394,7 +394,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
-        Task {
+        Task { @MainActor in
             guard let download = await self.taskIdentifiers[downloadTask.taskIdentifier] else {
                 downloadTask.cancel()
                 return
@@ -411,7 +411,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        Task {
+        Task { @MainActor in
             guard let download = await self.taskIdentifiers[downloadTask.taskIdentifier],
                   let response = downloadTask.response as? HTTPURLResponse,
                   Constants.acceptableStatusCodes.contains(response.statusCode)
@@ -426,7 +426,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
     }
 
     nonisolated public func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
-        Task {
+        Task { @MainActor in
             for (id, task) in await self.tasks {
                 guard let download = await self.queue.download(with: id) else {
                     return

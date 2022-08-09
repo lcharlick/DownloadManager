@@ -36,7 +36,7 @@ public class DownloadProgress: Identifiable, ObservableObject {
         }
     }
 
-    public internal(set) var received: Int {
+    public var received: Int {
         get {
             _received
         }
