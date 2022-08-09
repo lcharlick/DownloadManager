@@ -10,7 +10,7 @@ import Swifter
 import XCTest
 
 final class DownloadManagerIntegrationTests: XCTestCase {
-    func testDownloadSingleItem() async throws {
+    @MainActor func testDownloadSingleItem() async throws {
         let data = try Data(randomOfLength: 1000)
         let url = URL(string: "http://localhost:8080/test1")!
 
@@ -35,7 +35,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         )
         let download = try await manager.append(url)
 
-        await waitForExpectations(timeout: 0.5)
+        waitForExpectations(timeout: 0.5)
 
         server.stop()
 
@@ -46,7 +46,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         XCTAssertEqual(delegate.tasks[download.id]?.state, .completed)
     }
 
-    func testDownloadMultipleItems() async throws {
+    @MainActor func testDownloadMultipleItems() async throws {
         let data1 = try Data(randomOfLength: 1000)
         let data2 = try Data(randomOfLength: 1500)
 
@@ -81,7 +81,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         let download1 = try await manager.append(url1)
         let download2 = try await manager.append(url2)
 
-        await waitForExpectations(timeout: 0.5)
+        waitForExpectations(timeout: 0.5)
 
         server.stop()
 
@@ -98,7 +98,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         XCTAssertEqual(delegate.tasks[download2.id]?.state, .completed)
     }
 
-    func testDownloadFailure() async throws {
+    @MainActor func testDownloadFailure() async throws {
         let url = URL(string: "http://localhost:8080/test1")!
 
         let server = try HttpServer.serve { path in
@@ -135,7 +135,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
 
         let download = try await manager.append(url)
 
-        await waitForExpectations(timeout: 0.5)
+        waitForExpectations(timeout: 0.5)
 
         server.stop()
 

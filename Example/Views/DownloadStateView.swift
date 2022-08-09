@@ -9,11 +9,11 @@ import DownloadManager
 import SwiftUI
 
 struct DownloadStateView: View {
-    let status: DownloadState.Status
+    let status: DownloadStatus
     @ObservedObject private var progress: ObservableProgress
 
     init(
-        status: DownloadState.Status,
+        status: DownloadStatus,
         progress: DownloadProgress
     ) {
         self.status = status

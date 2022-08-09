@@ -9,7 +9,7 @@ import DownloadManager
 import Foundation
 
 protocol ViewModelType: ObservableObject {
-    var status: DownloadState.Status { get }
+    var status: DownloadStatus { get }
     var queue: [Download] { get }
 
     var progress: DownloadProgress { get }
@@ -23,7 +23,7 @@ protocol ViewModelType: ObservableObject {
 }
 
 class ViewModel: ViewModelType, ObservableObject {
-    @Published var status: DownloadState.Status
+    @Published var status: DownloadStatus
     @Published var queue = [Download]()
     let progress: DownloadProgress
 
@@ -94,7 +94,7 @@ extension ViewModel: DownloadManagerDelegate {
         queue = items
     }
 
-    func downloadManagerStatusDidChange(_ status: DownloadState.Status) {
+    func downloadManagerStatusDidChange(_ status: DownloadStatus) {
         print("status changed: \(status)")
         self.status = status
     }

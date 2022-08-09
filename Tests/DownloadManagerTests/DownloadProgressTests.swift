@@ -9,6 +9,7 @@ import Combine
 @testable import DownloadManager
 import XCTest
 
+@MainActor
 final class DownloadProgressTests: XCTestCase {
     func testFractionCompleted() {
         XCTAssertEqual(DownloadProgress(expected: 0, received: 0).fractionCompleted, 0)

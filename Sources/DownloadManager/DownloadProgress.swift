@@ -8,6 +8,7 @@
 import Combine
 import Foundation
 
+@MainActor
 public class DownloadProgress: Identifiable, ObservableObject {
     public let id = UUID()
 
@@ -50,8 +51,6 @@ public class DownloadProgress: Identifiable, ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     private var updateFractionCancellable: AnyCancellable?
-
-    private let lock = NSLock()
 
     private var children: Set<DownloadProgress> = [] {
         didSet {
@@ -125,27 +124,19 @@ public class DownloadProgress: Identifiable, ObservableObject {
     }
 
     func addChild(_ child: DownloadProgress) {
-        lock.lock()
         children.insert(child)
-        lock.unlock()
     }
 
     func addChildren(_ children: [DownloadProgress]) {
-        lock.lock()
         self.children.formUnion(Set(children))
-        lock.unlock()
     }
 
     func removeChild(_ child: DownloadProgress) {
-        lock.lock()
         children.remove(child)
-        lock.unlock()
     }
 
     func removeChildren(_ children: [DownloadProgress]) {
-        lock.lock()
         self.children.subtract(children)
-        lock.unlock()
     }
 }
 
@@ -154,7 +145,7 @@ extension DownloadProgress: Hashable {
         lhs.id == rhs.id
     }
 
-    public func hash(into hasher: inout Hasher) {
+    nonisolated public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }

@@ -11,12 +11,12 @@ import Foundation
 public actor DownloadManager: NSObject {
     lazy var queue = DownloadQueue(delegate: self)
 
-    private(set) public var progress = DownloadProgress()
+    private(set) public var progress: DownloadProgress
 
-    public var status: DownloadState.Status {
+    public var status: DownloadStatus {
         get async {
             let downloads = await queue.downloads
-            return Self.calculateStatus(for: downloads)
+            return await Self.calculateStatus(for: downloads)
         }
     }
 
@@ -59,10 +59,11 @@ public actor DownloadManager: NSObject {
     /// - Parameters:
     ///   - sessionConfiguration: The `URLSession` configuration to use.
     ///   - delegate: The delegate instance for this download manager.
-    public init(
+    @MainActor public init(
         sessionConfiguration: URLSessionConfiguration,
         delegate: DownloadManagerDelegate? = nil
     ) {
+        self.progress = .init()
         self.sessionConfiguration = sessionConfiguration
         self.delegate = delegate
         super.init()
@@ -99,7 +100,7 @@ public actor DownloadManager: NSObject {
         await delegate?.downloadStatusDidChange(download)
 
         if await self.status == .downloading {
-            startMonitoringThroughput()
+            await startMonitoringThroughput()
         } else {
             await stopMonitoringThroughput()
         }
@@ -121,7 +122,7 @@ public actor DownloadManager: NSObject {
 //    }
 
     /// Calculate the aggregate status for a subset of downloads in the queue.
-    public static func calculateStatus(for downloads: [Download]) -> DownloadState.Status {
+    @MainActor public static func calculateStatus(for downloads: [Download]) -> DownloadStatus {
         guard !downloads.isEmpty else {
             return .idle
         }
@@ -142,7 +143,7 @@ public actor DownloadManager: NSObject {
             return .paused
         }
 
-        let errors = downloadsByStatus.reduce(into: Set<DownloadState.Error>()) { errors, value in
+        let errors = downloadsByStatus.reduce(into: Set<DownloadError>()) { errors, value in
             switch value.key {
             case let .failed(error):
                 errors.insert(error)
@@ -159,14 +160,14 @@ public actor DownloadManager: NSObject {
     }
 
     /// Calculate the progress of a subset of downloads in the queue.
-    public static func progress(of downloads: [Download]) -> DownloadProgress {
+    @MainActor public static func progress(of downloads: [Download]) -> DownloadProgress {
         let progress = DownloadProgress(children: downloads.map(\.progress))
         return progress
     }
 
     /// Calculate the state of a subset of downloads in the queue.
-    public static func state(of downloads: [Download]) -> DownloadState {
-        .init(
+    @MainActor public static func state(of downloads: [Download]) -> (status: DownloadStatus, progress: DownloadProgress) {
+        (
             status: Self.calculateStatus(for: downloads),
             progress: Self.progress(of: downloads)
         )
@@ -184,7 +185,7 @@ public actor DownloadManager: NSObject {
             tasks[download.id] = task
             await delegate?.download(download, didCreateTask: task)
         }
-        progress.addChildren(downloads.map(\.progress))
+        await progress.addChildren(downloads.map(\.progress))
         await queue.append(downloads)
     }
 
@@ -205,7 +206,7 @@ public actor DownloadManager: NSObject {
         for download in downloads {
             await cancelTask(for: download)
         }
-        progress.removeChildren(downloads.map(\.progress))
+        await progress.removeChildren(downloads.map(\.progress))
         await queue.remove(downloads)
     }
 
@@ -219,18 +220,18 @@ public actor DownloadManager: NSObject {
     /// If supported, the delegate will receive resume data via the `didCancelWithResumeData` method.
     /// See https://developer.apple.com/documentation/foundation/url_loading_system/pausing_and_resuming_downloads for more information.
     public func pause(_ download: Download) async {
-        guard download.status != .finished else { return }
-        download.status = .paused
+        guard await download.status != .finished else { return }
+        await download.setStatus(.paused)
         await cancelTask(for: download)
     }
 
     /// Resume a paused or failed download.
     public func resume(_ download: Download) async {
-        guard download.status != .finished else { return }
+        guard await download.status != .finished else { return }
         let task = await createTask(for: download)
         tasks[download.id] = task
         await delegate?.download(download, didCreateTask: task)
-        download.status = .idle
+        await download.setStatus(.idle)
     }
 
     /// Updates a download with a new request object, e.g. if the URL has changed.
@@ -244,7 +245,7 @@ public actor DownloadManager: NSObject {
             task.cancel()
             taskIdentifiers[task.taskIdentifier] = nil
         }
-        download.request = request
+        await download.setRequest(request)
         let newTask = await createTask(for: download)
         tasks[download.id] = newTask
         taskIdentifiers[newTask.taskIdentifier] = download
@@ -265,7 +266,7 @@ private extension DownloadManager {
             guard let request = task.currentRequest else {
                 continue
             }
-            let download = Download(request: request, progress: .init())
+            let download = await Download(request: request, progress: .init())
             await delegate?.download(download, didReconnectTask: task)
             downloads.append(download)
         }
@@ -281,8 +282,8 @@ private extension DownloadManager {
         if let resumeData = await delegate?.resumeDataForDownload(download) {
             task = session.downloadTask(withResumeData: resumeData)
         } else {
-            task = session.downloadTask(with: download.request)
-            task.countOfBytesClientExpectsToReceive = Int64(download.progress.expected)
+            task = await session.downloadTask(with: download.request)
+            task.countOfBytesClientExpectsToReceive = await Int64(download.progress.expected)
         }
         taskIdentifiers[task.taskIdentifier] = download
         return task
@@ -303,11 +304,11 @@ private extension DownloadManager {
 
 // MARK: - Throughput.
 
-extension DownloadManager {
-    public func startMonitoringThroughput() {
+private extension DownloadManager {
+    func startMonitoringThroughput() async {
         guard timer == nil else { return }
         lastThroughputCalculationTime = Date()
-        lastThroughputUnitCount = Double(progress.expected) * progress.fractionCompleted
+        lastThroughputUnitCount = await Double(progress.expected) * progress.fractionCompleted
 
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
@@ -319,15 +320,15 @@ extension DownloadManager {
         self.timer = timer
     }
 
-    public func stopMonitoringThroughput() async {
+    func stopMonitoringThroughput() async {
         timer?.invalidate()
         timer = nil
         await delegate?.downloadThroughputDidChange(0)
     }
 
-    private func updateThroughput() async {
+    func updateThroughput() async {
         let now = Date()
-        let unitCount = Double(progress.expected) * progress.fractionCompleted
+        let unitCount = await Double(progress.expected) * progress.fractionCompleted
         let unitCountDelta = unitCount - lastThroughputUnitCount
         let timeDelta = now.timeIntervalSince(lastThroughputCalculationTime)
         let throughput = Int(Double(unitCountDelta) / timeDelta)
@@ -344,9 +345,9 @@ extension DownloadManager: DownloadQueueDelegate {
         await delegate?.downloadQueueDidChange(queue.downloads)
     }
 
-    func downloadShouldBeginDownloading(_ download: Download) {
+    func downloadShouldBeginDownloading(_ download: Download) async {
         tasks[download.id]?.resume()
-        download.status = .downloading
+        await download.setStatus(.downloading)
     }
 }
 
@@ -369,10 +370,10 @@ extension DownloadManager: URLSessionDownloadDelegate {
                     let urlError = URLError(URLError.Code(rawValue: error.code))
                     // Don't consider cancellation a failure.
                     if urlError.code != .cancelled {
-                        download.status = .failed(.transportError(urlError, localizedDescription: error.localizedDescription))
+                        download.setStatus(.failed(.transportError(urlError, localizedDescription: error.localizedDescription)))
                     }
                 } else {
-                    download.status = .failed(.unknown(code: error.code, localizedDescription: error.localizedDescription))
+                    download.setStatus(.failed(.unknown(code: error.code, localizedDescription: error.localizedDescription)))
                 }
                 return
             }
@@ -382,7 +383,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
             }
 
             if !Constants.acceptableStatusCodes.contains(response.statusCode) {
-                download.status = .failed(.serverError(statusCode: response.statusCode))
+                download.setStatus(.failed(.serverError(statusCode: response.statusCode)))
             }
         }
     }
@@ -421,7 +422,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
             await self.delegate?.download(download, didFinishDownloadingTo: location)
 
-            download.status = .finished
+            download.setStatus(.finished)
         }
     }
 
