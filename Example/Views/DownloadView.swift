@@ -17,10 +17,10 @@ struct DownloadView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(download.url.absoluteString)
-                DownloadStateView(status: download.status, progress: download.progress)
+                DownloadStateView(status: DownloadStatus, progress: download.progress)
             }
             DownloadActionButton(
-                action: download.status.action,
+                action: DownloadStatus.action,
                 pauseHandler: pauseHandler,
                 resumeHandler: resumeHandler
             )

@@ -8,7 +8,7 @@
 import Foundation
 import OSLog
 
-@available(iOS 14.0, *)
+@available(iOS 14.0, macOS 11.0, *)
 let logger = Logger(subsystem: "me.charlick.download-manager", category: "default")
 
 /// Manages a queue of http download tasks.
@@ -109,21 +109,6 @@ public actor DownloadManager: NSObject {
             await stopMonitoringThroughput()
         }
     }
-
-    /// Calculate the queue status and update if it has changed.
-//    private func updateStatus() async {
-//        let newStatus = await Self.calculateStatus(for: queue.downloads)
-//        if newStatus != state.status {
-//            if newStatus == .downloading {
-//                startMonitoringThroughput()
-//            } else if state.status == .downloading {
-//                stopMonitoringThroughput()
-//            }
-//
-//            state.status = newStatus
-//            delegate?.downloadManagerStatusDidChange(state.status)
-//        }
-//    }
 
     /// Calculate the aggregate status for a subset of downloads in the queue.
     @MainActor public static func calculateStatus(for downloads: [Download]) -> DownloadStatus {
@@ -424,7 +409,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
             do {
                 try FileManager.default.moveItem(at: location, to: tempLocation)
             } catch {
-                if #available(iOS 14.0, *) {
+                if #available(iOS 14.0, macOS 11.0, *) {
                     logger.error("Failed to move download to temp directory: \(error)")
                 }
                 return

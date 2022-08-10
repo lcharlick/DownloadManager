@@ -25,8 +25,6 @@ actor DownloadQueue {
     }
 
     func update() async {
-//        let downloadsByStatus = Dictionary(grouping: downloads) { $0.status }
-
         var downloading = [Download]()
         var idle = [Download]()
 
@@ -42,7 +40,6 @@ actor DownloadQueue {
             }
         }
 
-//        let numberDownloading = downloadsByStatus[.downloading]?.count ?? 0
         let maxConcurrentDownloads = await delegate?.maxConcurrentDownloads ?? 1
 
         let slotsAvailable = maxConcurrentDownloads - downloading.count

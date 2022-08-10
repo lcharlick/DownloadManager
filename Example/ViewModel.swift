@@ -112,7 +112,7 @@ extension ViewModel: DownloadManagerDelegate {
         }
     }
 
-    func downloadStatusDidChange(_ download: Download) {
+    func Download.StatusDidChange(_ download: Download) {
         print("status changed for item: \(download.id)")
         download.objectWillChange.send()
     }

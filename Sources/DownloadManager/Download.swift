@@ -28,10 +28,6 @@ import Foundation
     }
 
     public var progress: DownloadProgress
-
-//    @Published
-//    private var state: DownloadState
-
     public var userInfo = [String: Any]()
 
     public init(
@@ -74,7 +70,6 @@ import Foundation
 public extension Download {
     var statusPublisher: AnyPublisher<DownloadStatus, Never> {
         $status
-//            .receive(on: DispatchQueue.main)
             .removeDuplicates()
             .eraseToAnyPublisher()
     }
