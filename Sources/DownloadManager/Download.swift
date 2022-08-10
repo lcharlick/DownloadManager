@@ -9,36 +9,43 @@ import Combine
 import Foundation
 
 /// Represents a single download task that can be added to a `DownloadManager`.
-public class Download: ObservableObject, Identifiable {
+@MainActor public class Download: ObservableObject, Identifiable {
     public let id: ID
-    var request: URLRequest
+
+    private(set) var request: URLRequest
+
     public var url: URL {
         request.url!
     }
 
     @Published
-    private var state: DownloadState
+    public private(set) var status: DownloadStatus {
+        didSet {
+            NotificationCenter.default.post(
+                .init(name: .downloadStatusChanged, object: self, userInfo: nil)
+            )
+        }
+    }
 
+    public var progress: DownloadProgress
     public var userInfo = [String: Any]()
 
     public init(
         id: ID = .init(),
         request: URLRequest,
-        status: DownloadState.Status = .idle,
+        status: DownloadStatus = .idle,
         progress: DownloadProgress
     ) {
         self.id = id
         self.request = request
-        state = .init(
-            status: status,
-            progress: progress
-        )
+        self.status = status
+        self.progress = progress
     }
 
     public convenience init(
         id: ID = .init(),
         url: URL,
-        status: DownloadState.Status = .idle,
+        status: DownloadStatus = .idle,
         progress: DownloadProgress
     ) {
         self.init(
@@ -49,31 +56,22 @@ public class Download: ObservableObject, Identifiable {
         )
     }
 
+    func setStatus(_ status: DownloadStatus) {
+        self.status = status
+    }
+
+    func setRequest(_ request: URLRequest) {
+        self.request = request
+    }
+
     public typealias ID = UUID
 }
 
 public extension Download {
-    var statusPublisher: AnyPublisher<DownloadState.Status, Never> {
-        $state.map(\.status)
-            .receive(on: DispatchQueue.main)
+    var statusPublisher: AnyPublisher<DownloadStatus, Never> {
+        $status
             .removeDuplicates()
             .eraseToAnyPublisher()
-    }
-
-    var status: DownloadState.Status {
-        get {
-            state.status
-        }
-        set {
-            state.status = newValue
-            NotificationCenter.default.post(
-                .init(name: .downloadStatusChanged, object: self, userInfo: nil)
-            )
-        }
-    }
-
-    var progress: DownloadProgress {
-        state.progress
     }
 }
 
@@ -89,7 +87,7 @@ extension Download: Hashable {
 
 extension Download: CustomStringConvertible {
     public var description: String {
-        "\(id) | \(state)"
+        "\(id) | \(status) | \(progress)"
     }
 }
 

@@ -25,17 +25,30 @@ actor DownloadQueue {
     }
 
     func update() async {
-        let downloadsByStatus = Dictionary(grouping: downloads) { $0.status }
-        let numberDownloading = downloadsByStatus[.downloading]?.count ?? 0
+        var downloading = [Download]()
+        var idle = [Download]()
+
+        for download in downloads {
+            let status = await download.status
+
+            if status == .downloading {
+                downloading.append(download)
+            }
+
+            if status == .idle {
+                idle.append(download)
+            }
+        }
+
         let maxConcurrentDownloads = await delegate?.maxConcurrentDownloads ?? 1
 
-        let slotsAvailable = maxConcurrentDownloads - numberDownloading
+        let slotsAvailable = maxConcurrentDownloads - downloading.count
 
-        guard numberDownloading <= maxConcurrentDownloads else {
+        guard downloading.count <= maxConcurrentDownloads else {
             return
         }
 
-        for download in downloadsByStatus[.idle]?.prefix(slotsAvailable) ?? [] {
+        for download in idle.prefix(slotsAvailable) {
             await delegate?.downloadShouldBeginDownloading(download)
         }
     }

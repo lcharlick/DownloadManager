@@ -54,7 +54,7 @@ extension Data {
 
 class DelegateSpy: DownloadManagerDelegate {
     var queueChanges = [[Download]]()
-    var statusChanges = [DownloadState.Status]()
+    var statusChanges = [DownloadStatus]()
 
     var requestedURLs = [URL]()
     var tasks = [Download.ID: URLSessionDownloadTask]()
@@ -70,7 +70,7 @@ class DelegateSpy: DownloadManagerDelegate {
         self.downloadStatusDidChangeHandler = downloadStatusDidChangeHandler
     }
 
-    func downloadManagerStatusDidChange(_ status: DownloadState.Status) {
+    func downloadManagerStatusDidChange(_ status: DownloadStatus) {
         statusChanges.append(status)
     }
 

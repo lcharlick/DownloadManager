@@ -12,7 +12,7 @@ import XCTest
 
 private let testURL = URL(string: "http://test")!
 
-final class DownloadManagerTests: XCTestCase {
+@MainActor final class DownloadManagerTests: XCTestCase {
     private var observation: NSKeyValueObservation?
     private var cancellables: Set<AnyCancellable> = []
     // swiftlint:disable:next weak_delegate
@@ -36,7 +36,7 @@ final class DownloadManagerTests: XCTestCase {
 extension DownloadManagerTests {
     struct EquatableDownload: Equatable {
         let url: URL
-        let status: DownloadState.Status
+        let status: DownloadStatus
     }
 
     func assertDownloadsEquals(
@@ -107,7 +107,7 @@ extension DownloadManagerTests {
 
     func testStatusChangesToFinishedIfOnlyItemFinished() async throws {
         let download = try await manager.append(testURL)
-        download.status = .finished
+        download.setStatus(.finished)
         let status = await manager.status
         XCTAssertEqual(status, .finished)
     }
@@ -115,7 +115,7 @@ extension DownloadManagerTests {
     func testStatusChangesToPausedIfAllUnfinishedDownloadsArePaused() async throws {
         let download1 = try await manager.append(URL(string: "http://test1")!)
         let download2 = try await manager.append(URL(string: "http://test2")!)
-        download1.status = .finished
+        download1.setStatus(.finished)
         await manager.pause(download2)
         let status = await manager.status
         XCTAssertEqual(status, .paused)
@@ -124,8 +124,8 @@ extension DownloadManagerTests {
     func testStatusChangesToFailedIfAllUnfinishedDownloadsAreFailed() async throws {
         let download1 = try await manager.append(URL(string: "http://test1")!)
         let download2 = try await manager.append(URL(string: "http://test2")!)
-        download1.status = .finished
-        download2.status = .failed(.serverError(statusCode: 500))
+        download1.setStatus(.finished)
+        download2.setStatus(.failed(.serverError(statusCode: 500)))
         let status = await manager.status
         XCTAssertEqual(status, .failed(.aggregate(errors: [.serverError(statusCode: 500)])))
     }
@@ -239,7 +239,7 @@ extension DownloadManagerTests {
     func testDownloadDuplicateURLReplacesFinishedDownload() async throws {
         let download = try await manager.append(testURL, estimatedSize: 100)
         await manager.append(download)
-        download.status = .finished
+        download.setStatus(.finished)
 
         let dupe = try await manager.append(testURL, estimatedSize: 100)
         await manager.append(dupe)
@@ -303,14 +303,14 @@ extension DownloadManagerTests {
             }
         }
 
-        await waitForExpectations(timeout: 0.5)
+        waitForExpectations(timeout: 0.5)
 
         XCTAssertEqual(download.status, .paused)
     }
 
     func testPauseFinishedDownloadHasNoEffect() async throws {
         let download = try await manager.append(testURL)
-        download.status = .finished
+        download.setStatus(.finished)
         await manager.pause(download)
         XCTAssertEqual(download.status, .finished)
     }
@@ -340,7 +340,7 @@ extension DownloadManagerTests {
         let download = try await manager.append(testURL)
         let originalTask = delegate.tasks[download.id]
         await manager.pause(download)
-        download.status = .finished
+        download.setStatus(.finished)
         await manager.resume(download)
         XCTAssertEqual(download.status, .finished)
         XCTAssertEqual(
@@ -364,7 +364,7 @@ extension DownloadManagerTests {
             }
         }
 
-        await waitForExpectations(timeout: 0.5)
+        waitForExpectations(timeout: 0.5)
     }
 
     func testCancelRemovesDownloadFromQueue() async throws {
@@ -381,7 +381,7 @@ extension DownloadManagerTests {
 
         await manager.remove(download)
 
-        await waitForExpectations(timeout: 0.1)
+        waitForExpectations(timeout: 0.1)
 
         await assertCurrentQueueEquals([])
     }
@@ -492,7 +492,7 @@ extension DownloadManagerTests {
 
     /*
     func testStatusChanges() async throws {
-        var statusChanges = [DownloadState.Status]()
+        var statusChanges = [DownloadStatus]()
 
         let delegate = DelegateSpy { _ in
             self.manager.status
@@ -521,9 +521,9 @@ extension DownloadManagerTests {
 
 extension DownloadManager {
     @discardableResult
-    func register(_ url: URL, estimatedSize: Int = 0) throws -> Download {
+    func register(_ url: URL, estimatedSize: Int = 0) async throws -> Download {
         let request = URLRequest(url: url)
-        let download = Download(
+        let download = await Download(
             request: request,
             progress: DownloadProgress(expected: estimatedSize)
         )
@@ -532,7 +532,7 @@ extension DownloadManager {
 
     @discardableResult
     func append(_ url: URL, estimatedSize: Int = 0) async throws -> Download {
-        let download = try register(url, estimatedSize: estimatedSize)
+        let download = try await register(url, estimatedSize: estimatedSize)
         await append(download)
         return download
     }
@@ -542,7 +542,7 @@ extension Download {
     convenience init(
         id: ID = .init(),
         url: URL,
-        status: DownloadState.Status
+        status: DownloadStatus
     ) {
         self.init(
             id: id,
