@@ -21,17 +21,3 @@ public enum DownloadError: Swift.Error, Hashable {
     case unknown(code: Int, localizedDescription: String)
     case aggregate(errors: Set<DownloadError>)
 }
-
-//extension DownloadState: CustomStringConvertible {
-//    public var description: String {
-//        "\(status) (\(progress.received) / \(progress.expected))"
-//    }
-//}
-//
-//extension DownloadState: Equatable {
-//    public static func == (lhs: DownloadState, rhs: DownloadState) -> Bool {
-//        lhs.status == rhs.status
-//            && lhs.progress == rhs.progress
-////            && lhs.progress.expected == rhs.progress.expected
-//    }
-//}

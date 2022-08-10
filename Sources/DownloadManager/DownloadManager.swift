@@ -6,6 +6,10 @@
 //
 
 import Foundation
+import OSLog
+
+@available(iOS 14.0, *)
+let logger = Logger(subsystem: "me.charlick.download-manager", category: "default")
 
 /// Manages a queue of http download tasks.
 public actor DownloadManager: NSObject {
@@ -412,6 +416,21 @@ extension DownloadManager: URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
+        // The file at `location` will be removed once this method exits, but we won't have told the delegate about it
+        // by then since we need to jump threads.
+        let tempLocation = FileManager.default.temporaryDirectory.appendingPathComponent(location.lastPathComponent)
+
+        if FileManager.default.fileExists(atPath: location.path) {
+            do {
+                try FileManager.default.moveItem(at: location, to: tempLocation)
+            } catch {
+                if #available(iOS 14.0, *) {
+                    logger.error("Failed to move download to temp directory: \(error)")
+                }
+                return
+            }
+        }
+
         Task { @MainActor in
             guard let download = await self.taskIdentifiers[downloadTask.taskIdentifier],
                   let response = downloadTask.response as? HTTPURLResponse,
@@ -420,7 +439,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
                 return
             }
 
-            await self.delegate?.download(download, didFinishDownloadingTo: location)
+            await self.delegate?.download(download, didFinishDownloadingTo: tempLocation)
+
+            // If the temporary file exists at this point, the delegate didn't move it.
+            if FileManager.default.fileExists(atPath: tempLocation.path) {
+                try? FileManager.default.removeItem(at: tempLocation)
+            }
 
             download.setStatus(.finished)
         }
