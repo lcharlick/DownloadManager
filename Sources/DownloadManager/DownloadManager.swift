@@ -15,7 +15,7 @@ let logger = Logger(subsystem: "me.charlick.download-manager", category: "defaul
 public actor DownloadManager: NSObject {
     lazy var queue = DownloadQueue(delegate: self)
 
-    private(set) public var progress: DownloadProgress
+    public private(set) var progress: DownloadProgress
 
     public var status: DownloadStatus {
         get async {
@@ -31,14 +31,14 @@ public actor DownloadManager: NSObject {
         delegateQueue: nil
     )
 
-    private(set) public weak var delegate: DownloadManagerDelegate?
+    public private(set) weak var delegate: DownloadManagerDelegate?
 
     public func setDelegate(_ delegate: DownloadManagerDelegate?) {
         self.delegate = delegate
     }
 
     /// The maximum number of downloads that can simultaneously have the `downloading` status.
-    private(set) public var maxConcurrentDownloads: Int = 1
+    public private(set) var maxConcurrentDownloads: Int = 1
 
     public func setMaxConcurrentDownloads(_ value: Int) {
         maxConcurrentDownloads = value
@@ -67,7 +67,7 @@ public actor DownloadManager: NSObject {
         sessionConfiguration: URLSessionConfiguration,
         delegate: DownloadManagerDelegate? = nil
     ) {
-        self.progress = .init()
+        progress = .init()
         self.sessionConfiguration = sessionConfiguration
         self.delegate = delegate
         super.init()
@@ -103,7 +103,7 @@ public actor DownloadManager: NSObject {
         await queue.update()
         await delegate?.downloadStatusDidChange(download)
 
-        if await self.status == .downloading {
+        if await status == .downloading {
             await startMonitoringThroughput()
         } else {
             await stopMonitoringThroughput()
@@ -261,7 +261,7 @@ private extension DownloadManager {
         }
 
         if !downloads.isEmpty {
-            await self.append(downloads)
+            await append(downloads)
         }
     }
 
@@ -285,9 +285,9 @@ private extension DownloadManager {
 
         let data = await task.cancelByProducingResumeData()
 
-        await self.delegate?.download(download, didCancelWithResumeData: data)
-        self.tasks[download.id] = nil
-        self.taskIdentifiers[task.taskIdentifier] = nil
+        await delegate?.download(download, didCancelWithResumeData: data)
+        tasks[download.id] = nil
+        taskIdentifiers[task.taskIdentifier] = nil
     }
 }
 
@@ -343,7 +343,7 @@ extension DownloadManager: DownloadQueueDelegate {
 // MARK: - URLSessionDownloadDelegate.
 
 extension DownloadManager: URLSessionDownloadDelegate {
-    nonisolated public func urlSession(
+    public nonisolated func urlSession(
         _: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?
@@ -377,7 +377,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
-    nonisolated public func urlSession(
+    public nonisolated func urlSession(
         _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didWriteData _: Int64,
@@ -396,7 +396,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
-    nonisolated public func urlSession(
+    public nonisolated func urlSession(
         _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
@@ -435,7 +435,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
-    nonisolated public func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
+    public nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession _: URLSession) {
         Task { @MainActor in
             for (id, task) in await self.tasks {
                 guard let download = await self.queue.download(with: id) else {

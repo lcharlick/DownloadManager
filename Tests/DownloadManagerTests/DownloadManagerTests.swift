@@ -491,32 +491,31 @@ extension DownloadManagerTests {
     }
 
     /*
-    func testStatusChanges() async throws {
-        var statusChanges = [DownloadStatus]()
+     func testStatusChanges() async throws {
+         var statusChanges = [DownloadStatus]()
 
-        let delegate = DelegateSpy { _ in
-            self.manager.status
-        }
+         let delegate = DelegateSpy { _ in
+             self.manager.status
+         }
 
-        await manager.setDelegate(delegate)
+         await manager.setDelegate(delegate)
 
+         let download = try await manager.append(testURL)
+         await manager.pause(download)
+         await manager.remove(download)
 
-        let download = try await manager.append(testURL)
-        await manager.pause(download)
-        await manager.remove(download)
+         let manager = DownloadManager(
+             sessionConfiguration: .default,
+             delegate: delegate
+         )
 
-        let manager = DownloadManager(
-            sessionConfiguration: .default,
-            delegate: delegate
-        )
-
-        XCTAssertEqual(delegate.statusChanges, [
-            .downloading,
-            .paused,
-            .idle,
-        ])
-    }
-    */
+         XCTAssertEqual(delegate.statusChanges, [
+             .downloading,
+             .paused,
+             .idle,
+         ])
+     }
+     */
 }
 
 extension DownloadManager {

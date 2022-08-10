@@ -145,7 +145,7 @@ extension DownloadProgress: Hashable {
         lhs.id == rhs.id
     }
 
-    nonisolated public func hash(into hasher: inout Hasher) {
+    public nonisolated func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
