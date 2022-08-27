@@ -4,7 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "DownloadManager",
-    platforms: [.macOS(.v10_15), .iOS(.v13)],
+    platforms: [.macOS(.v10_15), .iOS(.v13), .watchOS(.v7)],
     products: [
         .library(
             name: "DownloadManager",
