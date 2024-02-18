@@ -1,10 +1,10 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 
 import PackageDescription
 
 let package = Package(
     name: "DownloadManager",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .watchOS(.v7)],
+    platforms: [.macOS(.v11), .iOS(.v14), .watchOS(.v7)],
     products: [
         .library(
             name: "DownloadManager",
@@ -12,8 +12,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(name: "Difference", url: "https://github.com/krzysztofzablocki/Difference.git", .branch("master")),
-        .package(name: "Swifter", url: "https://github.com/httpswift/swifter.git", .branch("stable")),
+        .package(url: "https://github.com/krzysztofzablocki/Difference.git", branch: "master"),
+        .package(url: "https://github.com/httpswift/swifter.git", branch: "stable"),
     ],
     targets: [
         .target(
@@ -25,7 +25,7 @@ let package = Package(
             dependencies: [
                 "DownloadManager",
                 "Difference",
-                "Swifter",
+                .product(name: "Swifter", package: "swifter")
             ]
         ),
     ]
