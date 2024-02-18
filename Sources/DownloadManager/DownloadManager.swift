@@ -241,7 +241,7 @@ public actor DownloadManager: NSObject {
     }
 
     enum Constants {
-        static let acceptableStatusCodes = Set(200 ..< 300)
+        static let acceptableStatusCodes = 200 ..< 300
     }
 }
 
