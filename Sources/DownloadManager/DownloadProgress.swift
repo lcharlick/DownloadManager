@@ -22,10 +22,10 @@ public class DownloadProgress: Identifiable, ObservableObject {
         }
     }
 
-    private var _expected: Int = 0
-    private var _received: Int = 0
+    private var _expected: Int64 = 0
+    private var _received: Int64 = 0
 
-    public var expected: Int {
+    public var expected: Int64 {
         get {
             _expected
         }
@@ -37,7 +37,7 @@ public class DownloadProgress: Identifiable, ObservableObject {
         }
     }
 
-    public var received: Int {
+    public var received: Int64 {
         get {
             _received
         }
@@ -58,7 +58,7 @@ public class DownloadProgress: Identifiable, ObservableObject {
         }
     }
 
-    public init(expected: Int = 0, received: Int = 0) {
+    public init(expected: Int64 = 0, received: Int64 = 0) {
         self.expected = expected
         self.received = received
         observeChanges()
@@ -114,7 +114,7 @@ public class DownloadProgress: Identifiable, ObservableObject {
     }
 
     private func updateValuesFromChildren() {
-        let (expected, received) = children.reduce(into: (0, 0)) {
+        let (expected, received) = children.reduce(into: (Int64(0), Int64(0))) {
             $0.0 += $1.expected
             $0.1 += $1.received
         }

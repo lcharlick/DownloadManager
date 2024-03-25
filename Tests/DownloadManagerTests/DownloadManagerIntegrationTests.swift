@@ -35,13 +35,13 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         )
         let download = try await manager.append(url)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 
         XCTAssertEqual(download.status, .finished)
-        XCTAssertEqual(download.progress.expected, data.count)
-        XCTAssertEqual(download.progress.received, data.count)
+        XCTAssertEqual(download.progress.expected, Int64(data.count))
+        XCTAssertEqual(download.progress.received, Int64(data.count))
         XCTAssertEqual(delegate.requestedURLs, [url])
         XCTAssertEqual(delegate.tasks[download.id]?.state, .completed)
     }
@@ -81,20 +81,20 @@ final class DownloadManagerIntegrationTests: XCTestCase {
         let download1 = try await manager.append(url1)
         let download2 = try await manager.append(url2)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 
         XCTAssertEqual(delegate.requestedURLs, [url1, url2])
 
         XCTAssertEqual(download1.status, .finished)
-        XCTAssertEqual(download1.progress.expected, data1.count)
-        XCTAssertEqual(download1.progress.received, data1.count)
+        XCTAssertEqual(download1.progress.expected, Int64(data1.count))
+        XCTAssertEqual(download1.progress.received, Int64(data1.count))
         XCTAssertEqual(delegate.tasks[download1.id]?.state, .completed)
 
         XCTAssertEqual(download2.status, .finished)
-        XCTAssertEqual(download2.progress.expected, data2.count)
-        XCTAssertEqual(download2.progress.received, data2.count)
+        XCTAssertEqual(download2.progress.expected, Int64(data2.count))
+        XCTAssertEqual(download2.progress.received, Int64(data2.count))
         XCTAssertEqual(delegate.tasks[download2.id]?.state, .completed)
     }
 
@@ -135,7 +135,7 @@ final class DownloadManagerIntegrationTests: XCTestCase {
 
         let download = try await manager.append(url)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 

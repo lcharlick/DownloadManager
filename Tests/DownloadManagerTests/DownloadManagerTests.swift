@@ -303,7 +303,7 @@ extension DownloadManagerTests {
             }
         }
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         XCTAssertEqual(download.status, .paused)
     }
@@ -364,7 +364,7 @@ extension DownloadManagerTests {
             }
         }
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
     }
 
     func testCancelRemovesDownloadFromQueue() async throws {
@@ -381,7 +381,7 @@ extension DownloadManagerTests {
 
         await manager.remove(download)
 
-        waitForExpectations(timeout: 0.1)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         await assertCurrentQueueEquals([])
     }
@@ -520,7 +520,7 @@ extension DownloadManagerTests {
 
 extension DownloadManager {
     @discardableResult
-    func register(_ url: URL, estimatedSize: Int = 0) async throws -> Download {
+    func register(_ url: URL, estimatedSize: Int64 = 0) async throws -> Download {
         let request = URLRequest(url: url)
         let download = await Download(
             request: request,
@@ -530,7 +530,7 @@ extension DownloadManager {
     }
 
     @discardableResult
-    func append(_ url: URL, estimatedSize: Int = 0) async throws -> Download {
+    func append(_ url: URL, estimatedSize: Int64 = 0) async throws -> Download {
         let download = try await register(url, estimatedSize: estimatedSize)
         await append(download)
         return download

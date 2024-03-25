@@ -389,8 +389,8 @@ extension DownloadManager: URLSessionDownloadDelegate {
                 return
             }
 
-            download.progress.received = Int(totalBytesWritten)
-            download.progress.expected = Int(totalBytesExpectedToWrite)
+            download.progress.received = totalBytesWritten
+            download.progress.expected = totalBytesExpectedToWrite
             await self.delegate?.downloadDidUpdateProgress(download)
         }
     }
@@ -438,7 +438,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
                 guard let download = await self.queue.download(with: id) else {
                     return
                 }
-                download.progress.received = Int(task.countOfBytesReceived)
+                download.progress.received = task.countOfBytesReceived
             }
             await self.delegate?.downloadManagerDidFinishBackgroundDownloads()
         }
