@@ -54,31 +54,36 @@ extension Data {
 
 class DelegateSpy: DownloadManagerDelegate {
     var queueChanges = [[Download]]()
-    var statusChanges = [DownloadState.Status]()
-
+    var statusChanges = [DownloadStatus]()
     var requestedURLs = [URL]()
     var tasks = [Download.ID: URLSessionDownloadTask]()
-
-    @Published
     var resumeData = [Download.ID: Data]()
+    var throughputHandler: ((Int) -> Void)?
 
     private let downloadStatusDidChangeHandler: (Download) -> Void
 
     init(
-        downloadStatusDidChangeHandler: @escaping (Download) -> Void
+        downloadStatusDidChangeHandler: @escaping (Download) -> Void = { _ in }
     ) {
         self.downloadStatusDidChangeHandler = downloadStatusDidChangeHandler
     }
 
-    func downloadManagerStatusDidChange(_ status: DownloadState.Status) {
-        statusChanges.append(status)
+    func downloadQueueDidChange(_ downloads: [Download]) async {
+        queueChanges.append(downloads.map {
+            Download(
+                url: $0.url,
+                status: $0.status
+            )
+        })
     }
 
-    func downloadDidUpdateProgress(_: Download) {}
+    func downloadThroughputDidChange(_ bytesPerSecond: Int) async {
+        throughputHandler?(bytesPerSecond)
+    }
 
-    func downloadThroughputDidChange(_: Int) {}
+    func downloadDidUpdateProgress(_: Download) async {}
 
-    func downloadStatusDidChange(_ download: Download) {
+    func downloadStatusDidChange(_ download: Download) async {
         downloadStatusDidChangeHandler(download)
     }
 
@@ -89,26 +94,18 @@ class DelegateSpy: DownloadManagerDelegate {
 
     func download(_: Download, didReconnectTask _: URLSessionDownloadTask) {}
 
-    func downloadQueueDidChange(_ downloads: [Download]) {
-        queueChanges.append(downloads.map {
-            Download(
-                url: $0.url,
-                status: $0.status
-            )
-        })
-    }
 
     func download(_ download: Download, didCancelWithResumeData data: Data?) {
         resumeData[download.id] = data ?? Data()
     }
 
-    func download(_: Download, didFinishDownloadingTo _: URL) {}
+    func download(_: Download, didFinishDownloadingTo _: URL) async {}
 
-    func resumeDataForDownload(_ download: Download) -> Data? {
+    func resumeDataForDownload(_ download: Download) async -> Data? {
         resumeData[download.id]
     }
 
-    func downloadManagerDidFinishBackgroundDownloads() {}
+    func downloadManagerDidFinishBackgroundDownloads() async {}
 }
 
 extension HttpServer {

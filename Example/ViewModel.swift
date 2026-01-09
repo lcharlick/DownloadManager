@@ -8,11 +8,13 @@
 import DownloadManager
 import Foundation
 
-protocol ViewModelType: ObservableObject {
-    var status: DownloadState.Status { get }
+protocol ViewModelType: Observable {
+    var status: DownloadStatus { get }
     var queue: [Download] { get }
 
-    var progress: DownloadProgress { get }
+    var fractionCompleted: Double { get }
+    var totalExpected: Int64 { get }
+    var totalReceived: Int64 { get }
     var throughput: Int { get }
     var estimatedTimeRemaining: TimeInterval? { get }
 
@@ -22,12 +24,24 @@ protocol ViewModelType: ObservableObject {
     func cancel(at offsets: IndexSet)
 }
 
-class ViewModel: ViewModelType, ObservableObject {
-    @Published var status: DownloadState.Status
-    @Published var queue = [Download]()
-    let progress: DownloadProgress
+@Observable
+class ViewModel: ViewModelType {
+    var status: DownloadStatus
+    var queue = [Download]()
 
-    @Published var throughput: Int = 0
+    var fractionCompleted: Double {
+        manager.fractionCompleted
+    }
+
+    var totalExpected: Int64 {
+        manager.totalExpected
+    }
+
+    var totalReceived: Int64 {
+        manager.totalReceived
+    }
+
+    var throughput: Int = 0
     var estimatedTimeRemaining: TimeInterval?
 
     private let manager: DownloadManager
@@ -38,47 +52,43 @@ class ViewModel: ViewModelType, ObservableObject {
 
     init(manager: DownloadManager = .init(sessionConfiguration: .default)) {
         self.manager = manager
-        status = manager.state.status
-        progress = manager.state.progress
-        manager.delegate = self
-
-        /*
-         self.observation = _progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-             guard let self = self else { return }
-             DispatchQueue.main.async {
-                 self.progress.totalUnitCount = progress.totalUnitCount
-                 self.progress.completedUnitCount = min(
-                     Int64(Double(progress.totalUnitCount)*progress.fractionCompleted),
-                     progress.totalUnitCount
-                 )
-             }
-         }
-         */
+        status = manager.status
+        Task {
+            await manager.setDelegate(self)
+        }
     }
 
-    func download(_ items: [Item]) {
+    func download(_ items: [Item]) async {
         let downloads = items.map {
-            Download(url: $0.url, progress: DownloadProgress(expected: $0.estimatedSize))
+            Download(url: $0.url, expected: Int64($0.estimatedSize))
         }
-        manager.append(downloads)
+        await manager.append(downloads)
     }
 
     func pause(_ download: Download) {
-        manager.pause(download)
+        Task {
+            await manager.pause(download)
+        }
     }
 
     func resume(_ download: Download) {
-        manager.resume(download)
+        Task {
+            await manager.resume(download)
+        }
     }
 
     func cancel(_ ids: Set<Download.ID>) {
         let downloads = ids.compactMap(manager.download(with:))
-        manager.remove(Set(downloads))
+        Task {
+            await manager.remove(Set(downloads))
+        }
     }
 
     func cancel(at offsets: IndexSet) {
         let downloads = offsets.map { queue[$0] }
-        manager.remove(Set(downloads))
+        Task {
+            await manager.remove(Set(downloads))
+        }
     }
 
     struct Item {
@@ -89,32 +99,27 @@ class ViewModel: ViewModelType, ObservableObject {
 }
 
 extension ViewModel: DownloadManagerDelegate {
-    func downloadQueueDidChange(_ items: [Download]) {
+    func downloadQueueDidChange(_ items: [Download]) async {
         print("queue changed (\(items.count))")
         queue = items
     }
 
-    func downloadManagerStatusDidChange(_ status: DownloadState.Status) {
-        print("status changed: \(status)")
-        self.status = status
+    func downloadStatusDidChange(_ download: Download) async {
+        print("status changed for item: \(download.id)")
+        status = manager.status
     }
 
-    func downloadDidUpdateProgress(_: Download) {
-        // print("progress updated: \(download.progress.fractionCompleted)")
+    func downloadDidUpdateProgress(_: Download) async {
+        // Progress updates are automatically handled by @Observable
     }
 
-    func downloadThroughputDidChange(_ throughput: Int) {
+    func downloadThroughputDidChange(_ throughput: Int) async {
         self.throughput = throughput
         if throughput > 0 {
-            estimatedTimeRemaining = Double(progress.expected - progress.received) / Double(throughput)
+            estimatedTimeRemaining = Double(totalExpected - totalReceived) / Double(throughput)
         } else {
             estimatedTimeRemaining = nil
         }
-    }
-
-    func downloadStatusDidChange(_ download: Download) {
-        print("status changed for item: \(download.id)")
-        download.objectWillChange.send()
     }
 
     func download(_ download: Download, didCreateTask _: URLSessionDownloadTask) {

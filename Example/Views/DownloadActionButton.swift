@@ -9,7 +9,7 @@ import DownloadManager
 import SwiftUI
 
 struct DownloadActionButton: View {
-    let action: DownloadState.Status.Action
+    let action: DownloadStatus.Action
     let pauseHandler: () -> Void
     let resumeHandler: () -> Void
 
@@ -31,7 +31,7 @@ struct DownloadActionButton: View {
     }
 }
 
-extension DownloadState.Status {
+extension DownloadStatus {
     var action: Action {
         switch self {
         case .downloading, .idle:

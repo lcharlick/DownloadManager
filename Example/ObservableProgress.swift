@@ -5,32 +5,31 @@
 //  Created by Lachlan Charlick on 3/3/21.
 //
 
-import Combine
 import DownloadManager
 import Foundation
 
-class ObservableProgress: ObservableObject {
+@Observable
+class ObservableProgress {
     private let _progress: Progress = .download(fraction: 0)
-    private let progress: DownloadProgress
+    private let manager: DownloadManager
 
-    @Published var fractionCompleted: Double = 0
-
-    var totalUnitCount: Int {
-        progress.expected
+    var fractionCompleted: Double {
+        manager.fractionCompleted
     }
 
-    var completedUnitCount: Int {
-        progress.received
+    var totalUnitCount: Int64 {
+        manager.totalExpected
+    }
+
+    var completedUnitCount: Int64 {
+        manager.totalReceived
     }
 
     var localizedAdditionalDescription: String {
         _progress.localizedAdditionalDescription
     }
 
-    init(progress: DownloadProgress) {
-        self.progress = progress
-        progress.$fractionCompleted
-            .receive(on: DispatchQueue.main)
-            .assign(to: &$fractionCompleted)
+    init(manager: DownloadManager) {
+        self.manager = manager
     }
 }

@@ -10,7 +10,7 @@ import Swifter
 import XCTest
 
 final class DownloadManagerIntegrationTests: XCTestCase {
-    func testDownloadSingleItem() throws {
+    @MainActor func testDownloadSingleItem() async throws {
         let data = try Data(randomOfLength: 1000)
         let url = URL(string: "http://localhost:8080/test1")!
 
@@ -33,20 +33,20 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             sessionConfiguration: .default,
             delegate: delegate
         )
-        let download = try manager.append(url)
+        let download = try await manager.append(url)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 
         XCTAssertEqual(download.status, .finished)
-        XCTAssertEqual(download.progress.expected, data.count)
-        XCTAssertEqual(download.progress.received, data.count)
+        XCTAssertEqual(download.expected, Int64(data.count))
+        XCTAssertEqual(download.received, Int64(data.count))
         XCTAssertEqual(delegate.requestedURLs, [url])
         XCTAssertEqual(delegate.tasks[download.id]?.state, .completed)
     }
 
-    func testDownloadMultipleItems() throws {
+    @MainActor func testDownloadMultipleItems() async throws {
         let data1 = try Data(randomOfLength: 1000)
         let data2 = try Data(randomOfLength: 1500)
 
@@ -78,27 +78,27 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             sessionConfiguration: .default,
             delegate: delegate
         )
-        let download1 = try manager.append(url1)
-        let download2 = try manager.append(url2)
+        let download1 = try await manager.append(url1)
+        let download2 = try await manager.append(url2)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 
         XCTAssertEqual(delegate.requestedURLs, [url1, url2])
 
         XCTAssertEqual(download1.status, .finished)
-        XCTAssertEqual(download1.progress.expected, data1.count)
-        XCTAssertEqual(download1.progress.received, data1.count)
+        XCTAssertEqual(download1.expected, Int64(data1.count))
+        XCTAssertEqual(download1.received, Int64(data1.count))
         XCTAssertEqual(delegate.tasks[download1.id]?.state, .completed)
 
         XCTAssertEqual(download2.status, .finished)
-        XCTAssertEqual(download2.progress.expected, data2.count)
-        XCTAssertEqual(download2.progress.received, data2.count)
+        XCTAssertEqual(download2.expected, Int64(data2.count))
+        XCTAssertEqual(download2.received, Int64(data2.count))
         XCTAssertEqual(delegate.tasks[download2.id]?.state, .completed)
     }
 
-    func testDownloadFailure() throws {
+    @MainActor func testDownloadFailure() async throws {
         let url = URL(string: "http://localhost:8080/test1")!
 
         let server = try HttpServer.serve { path in
@@ -133,9 +133,9 @@ final class DownloadManagerIntegrationTests: XCTestCase {
             delegate: delegate
         )
 
-        let download = try manager.append(url)
+        let download = try await manager.append(url)
 
-        waitForExpectations(timeout: 0.5)
+        await fulfillment(of: [expectation], timeout: 0.5)
 
         server.stop()
 

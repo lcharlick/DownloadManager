@@ -88,7 +88,7 @@ class PreviewViewModel: ViewModelType {
 
     var estimatedTimeRemaining: TimeInterval? = 10
 
-    var status = DownloadState.Status.downloading
+    var status = DownloadStatus.downloading
     var progress = DownloadProgress(expected: 1000, received: 500)
 
     let queue: [Download]

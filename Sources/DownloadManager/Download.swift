@@ -5,91 +5,90 @@
 // Created by Lachlan Charlick on 2/3/21.
 //
 
-import Combine
 import Foundation
 
 /// Represents a single download task that can be added to a `DownloadManager`.
-public class Download: ObservableObject, Identifiable {
+@Observable
+@MainActor public class Download: Identifiable {
     public let id: ID
-    var request: URLRequest
+
+    private(set) var request: URLRequest
+
     public var url: URL {
         request.url!
     }
 
-    @Published
-    private var state: DownloadState
-
-    public var userInfo = [String: Any]()
-
-    public init(
-        id: ID = .init(),
-        request: URLRequest,
-        status: DownloadState.Status = .idle,
-        progress: DownloadProgress
-    ) {
-        self.id = id
-        self.request = request
-        state = .init(
-            status: status,
-            progress: progress
-        )
-    }
-
-    public convenience init(
-        id: ID = .init(),
-        url: URL,
-        status: DownloadState.Status = .idle,
-        progress: DownloadProgress
-    ) {
-        self.init(
-            id: id,
-            request: URLRequest(url: url),
-            status: status,
-            progress: progress
-        )
-    }
-
-    public typealias ID = UUID
-}
-
-public extension Download {
-    var statusPublisher: AnyPublisher<DownloadState.Status, Never> {
-        $state.map(\.status)
-            .receive(on: DispatchQueue.main)
-            .removeDuplicates()
-            .eraseToAnyPublisher()
-    }
-
-    var status: DownloadState.Status {
-        get {
-            state.status
-        }
-        set {
-            state.status = newValue
+    public private(set) var status: DownloadStatus {
+        didSet {
             NotificationCenter.default.post(
                 .init(name: .downloadStatusChanged, object: self, userInfo: nil)
             )
         }
     }
 
-    var progress: DownloadProgress {
-        state.progress
+    public var expected: Int64 = 0
+    public var received: Int64 = 0
+
+    public var fractionCompleted: Double {
+        expected > 0 ? Double(received) / Double(expected) : 0
     }
+
+    public var userInfo = [String: Any]()
+
+    public init(
+        id: ID = .init(),
+        request: URLRequest,
+        status: DownloadStatus = .idle,
+        expected: Int64 = 0,
+        received: Int64 = 0
+    ) {
+        self.id = id
+        self.request = request
+        self.status = status
+        self.expected = expected
+        self.received = received
+    }
+
+    public convenience init(
+        id: ID = .init(),
+        url: URL,
+        status: DownloadStatus = .idle,
+        expected: Int64 = 0,
+        received: Int64 = 0
+    ) {
+        self.init(
+            id: id,
+            request: URLRequest(url: url),
+            status: status,
+            expected: expected,
+            received: received
+        )
+    }
+
+    func setStatus(_ status: DownloadStatus) {
+        self.status = status
+    }
+
+    func setRequest(_ request: URLRequest) {
+        self.request = request
+    }
+
+    public typealias ID = UUID
 }
 
 extension Download: Hashable {
-    public static func == (lhs: Download, rhs: Download) -> Bool {
+    nonisolated public static func == (lhs: Download, rhs: Download) -> Bool {
         lhs.id == rhs.id
     }
 
-    public func hash(into hasher: inout Hasher) {
+    nonisolated public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
 }
 
-extension Download: CustomStringConvertible {
+extension Download: @MainActor CustomStringConvertible {
     public var description: String {
-        "\(id) | \(state)"
+        "\(id) | \(status) | \(received)/\(expected) (\(String(format: "%.1f", fractionCompleted * 100))%)"
     }
 }
 

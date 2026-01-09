@@ -9,7 +9,7 @@ import DownloadManager
 import SwiftUI
 
 struct DownloadDescriptionView: View {
-    let status: DownloadState.Status
+    let status: DownloadStatus
 
     let totalUnitCount: Int
     let completedUnitCount: Int
