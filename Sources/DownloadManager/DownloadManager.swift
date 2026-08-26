@@ -243,6 +243,7 @@ let logger = Logger(subsystem: "me.charlick.download-manager", category: "defaul
         tasks[download.id] = task
         await delegate?.download(download, didCreateTask: task)
         download.setStatus(.idle)
+        updateQueue()
     }
 
     /// Updates a download with a new request object, e.g. if the URL has changed.
