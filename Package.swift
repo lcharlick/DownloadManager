@@ -10,6 +10,10 @@ let package = Package(
             name: "DownloadManager",
             targets: ["DownloadManager"]
         ),
+        .library(
+            name: "DownloadKit",
+            targets: ["DownloadKit"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/krzysztofzablocki/Difference.git", branch: "master"),
@@ -17,16 +21,26 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "DownloadKit",
+            dependencies: [],
+            path: "Sources/DownloadManager"
+        ),
+        .target(
             name: "DownloadManager",
-            dependencies: []
+            dependencies: ["DownloadKit"],
+            path: "Sources/DownloadManagerCompatibility"
         ),
         .testTarget(
             name: "DownloadManagerTests",
             dependencies: [
-                "DownloadManager",
+                "DownloadKit",
                 "Difference",
                 .product(name: "Swifter", package: "swifter")
             ]
+        ),
+        .testTarget(
+            name: "DownloadManagerCompatibilityTests",
+            dependencies: ["DownloadManager"]
         ),
     ]
 )

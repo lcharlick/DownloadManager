@@ -1,5 +1,5 @@
 import XCTest
-@testable import DownloadManager
+@testable import DownloadKit
 
 @MainActor
 final class DownloadObservableTests: XCTestCase {

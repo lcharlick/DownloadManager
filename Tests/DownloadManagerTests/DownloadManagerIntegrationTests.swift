@@ -5,7 +5,7 @@
 //  Created by Lachlan Charlick on 1/3/21.
 //
 
-@testable import DownloadManager
+@testable import DownloadKit
 import Swifter
 import XCTest
 

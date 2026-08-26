@@ -6,7 +6,7 @@
 //
 
 import Difference
-@testable import DownloadManager
+@testable import DownloadKit
 import Swifter
 import XCTest
 
