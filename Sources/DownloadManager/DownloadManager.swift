@@ -106,7 +106,7 @@ let logger = Logger(subsystem: "me.charlick.download-manager", category: "defaul
     }
 
     /// Reattach any outstanding tasks from a previous launch.
-    public func attachOutstandingDownloadTasks(completionHandler: @escaping (Int) -> Void) {
+    public func attachOutstandingDownloadTasks(completionHandler: @escaping @Sendable (Int) -> Void) {
         session.getAllTasks { tasks in
             Task { @MainActor in
                 let downloadTasks = tasks.compactMap {

@@ -17,7 +17,7 @@ private let testURL = URL(string: "http://test")!
     private var delegate: DelegateSpy!
     private var manager: DownloadManager!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
         delegate = DelegateSpy { _ in }
         manager = DownloadManager(
             sessionConfiguration: .default,
@@ -550,4 +550,3 @@ extension DownloadManager {
         return download
     }
 }
-

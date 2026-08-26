@@ -20,7 +20,7 @@ public func XCTAssertEqual<T: Equatable>(_ received: @autoclosure () throws -> T
     }
 }
 
-extension URLSessionTask.State: CustomStringConvertible {
+extension URLSessionTask.State: @retroactive CustomStringConvertible {
     public var description: String {
         switch self {
         case .canceling:
