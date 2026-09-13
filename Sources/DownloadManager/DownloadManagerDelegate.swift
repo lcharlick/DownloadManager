@@ -6,13 +6,19 @@
 //
 
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public protocol DownloadManagerDelegate: AnyObject {
+    #if !os(Android) && !os(Linux)
     /// Tells the delegate when a download task has been created.
     @MainActor func download(_ download: Download, didCreateTask: URLSessionDownloadTask) async
 
     /// Tells the delegate when a background download task reconnects.
     @MainActor func download(_ download: Download, didReconnectTask: URLSessionDownloadTask) async
+
+    #endif
 
     /// Tells the delegate that a download task has finished downloading.
     /// The file at `location` must be opened or moved before this method returns.
@@ -40,4 +46,15 @@ public protocol DownloadManagerDelegate: AnyObject {
 
     /// Tells the delegate when a download's status changes.
     @MainActor func downloadStatusDidChange(_ download: Download) async
+    /// Re-resolve credentials immediately before an execution attempt.
+    @MainActor func requestForDownload(_ download: Download) async throws -> URLRequest
+    /// Completion is acknowledged only after durable storage succeeds.
+    @MainActor func finalizeDownload(_ download: Download, location: URL) async throws
+}
+
+public extension DownloadManagerDelegate {
+    @MainActor func requestForDownload(_ download: Download) async throws -> URLRequest { download.request }
+    @MainActor func finalizeDownload(_ download: Download, location: URL) async throws {
+        await self.download(download, didFinishDownloadingTo: location)
+    }
 }

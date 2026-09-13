@@ -6,13 +6,22 @@
 //
 
 import Foundation
+import Observation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Represents a single download task that can be added to a `DownloadManager`.
 @Observable
 @MainActor public class Download: Identifiable {
     public let id: ID
+    public internal(set) var attempt = UUID()
+    public var context: [String: String] = [:]
+    public internal(set) var completionLocation: URL?
 
     private(set) var request: URLRequest
+
+    public var requestValue: URLRequest { request }
 
     public var url: URL {
         request.url!
